@@ -149,6 +149,15 @@ import org.apache.cassandra.utils.TimeUUID;
 import org.apache.cassandra.utils.concurrent.CountDownLatch;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 
+// raj debug start
+
+import org.apache.cassandra.db.rows.Cell;
+import org.apache.cassandra.db.rows.Row;
+import org.apache.cassandra.db.Clustering;
+import org.apache.cassandra.utils.ByteBufferUtil;
+
+// raj debug end
+
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
@@ -903,6 +912,8 @@ public class StorageProxy implements StorageProxyMBean
             // wait for writes.  throws TimeoutException if necessary
             for (AbstractWriteResponseHandler<IMutation> responseHandler : responseHandlers)
                 responseHandler.get();
+
+            Tracing.trace("Write finished inside");
         }
         catch (WriteTimeoutException|WriteFailureException ex)
         {
@@ -1154,7 +1165,54 @@ public class StorageProxy implements StorageProxyMBean
             if (mutateAtomically || updatesView)
                 mutateAtomically((Collection<Mutation>) mutations, consistencyLevel, updatesView, requestTime);
             else
+            {
+                Tracing.trace("Write starting outside");
                 mutate(mutations, consistencyLevel, requestTime);
+                Tracing.trace("Write finished outside");
+                // Raj debug start
+                for (IMutation mutation : mutations)
+                {
+                    String value = "";
+                    Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
+                    if (data != null)
+                    {
+                        for (Cell cell : data.cells())
+                        {
+                            logger.info("Raj StorageProxy mutation with followinf details already applied ");
+                            logger.info("Raj StorageProxy key is " + mutation.key().toString());
+                            if (cell.column().name.toString().equals("data"))
+                            {
+                                try
+                                {
+                                    value = ByteBufferUtil.string(cell.buffer());
+                                    logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
+                                    logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
+                                    Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                                    long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
+                                    TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", "signal");
+                                    Mutation signalMutation = mutationBuilder.build();
+                                    List<Mutation>  signalMutations = new ArrayList<>();
+                                    signalMutations.add(signalMutation);
+                                    Tracing.trace("Write sending EC signal outside");
+                                    mutate(signalMutations, consistencyLevel, requestTime);
+                                    Tracing.trace("Write  EC signal finished outside");
+                                }
+                                catch (Exception e)    //catch (CharacterCodingException e)
+                                {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //logger.info("Null pointer exception");
+                    }
+
+                }
+                //Raj debug end
+            }
         }
     }
 

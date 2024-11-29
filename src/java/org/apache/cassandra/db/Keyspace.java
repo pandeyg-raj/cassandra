@@ -18,6 +18,7 @@
 package org.apache.cassandra.db;
 
 import java.io.IOException;
+import java.nio.charset.CharacterCodingException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +47,8 @@ import org.apache.cassandra.config.DurationSpec;
 import org.apache.cassandra.db.lifecycle.SSTableSet;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.db.repair.CassandraKeyspaceRepairManager;
+import org.apache.cassandra.db.rows.Cell;
+import org.apache.cassandra.db.rows.Row;
 import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
@@ -73,6 +76,18 @@ import org.apache.cassandra.utils.concurrent.OpOrder;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 import org.apache.cassandra.utils.concurrent.Promise;
 
+// raj debug start
+
+import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.schema.ColumnMetadata;
+import org.apache.cassandra.db.rows.RowIterator;
+import org.apache.cassandra.db.partitions.PartitionIterator;
+import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
+import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
+
+//raj debug end
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.cassandra.utils.Clock.Global.currentTimeMillis;
@@ -527,6 +542,95 @@ public class Keyspace
                                                boolean isDeferrable,
                                                Promise<?> future)
     {
+
+        // Raj debug start
+        String value = "";
+        Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
+        if (data != null)
+        {
+            for (Cell cell : data.cells())
+            {
+                logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
+                if (cell.column().name.toString().equals("data"))
+                {
+                    try
+                    {
+                        value = ByteBufferUtil.string(cell.buffer());
+                        if (value.equals("signal"))
+                        {
+                            Tracing.trace("EC Signal received at Storage layer");
+                            logger.info("Raj KeySpace column is: " + cell.column().name.toString() + " value is " + value);
+
+                            // here read local value and erasure code and write in mutation
+                            TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+
+                            SinglePartitionReadCommand localRead =
+                            SinglePartitionReadCommand.fullPartitionRead(tableMetadata,
+                            FBUtilities.nowInSeconds(),
+                            mutation.key() );
+
+                            try (ReadExecutionController executionController = localRead.executionController();
+                                 UnfilteredPartitionIterator iterator = localRead.executeLocally(executionController))
+                            {
+                                // first we have to transform it into a PartitionIterator
+                                PartitionIterator pi = UnfilteredPartitionIterators.filter(iterator, localRead.nowInSec());
+                                while(pi.hasNext())
+                                {
+                                    RowIterator ri = pi.next();
+                                    while(ri.hasNext())
+                                    {
+                                        Row r = ri.next();
+
+                                        ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes("data"));
+                                        Cell c = r.getCell(colMeta);
+
+                                        String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
+                                        // finish encode data
+                                        byte [][]encodeMatrix = new ErasureCode().encodeData(local_value);
+                                        Tracing.trace("ECing value {} Storage layer",local_value);
+                                        String coded_value  =  ECConfig.byteToString(encodeMatrix[0]);
+                                        Tracing.trace("ECed new value {} Storage layer",coded_value);
+                                        // here updated value should be Erasure code part based on server
+
+                                        Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                                        long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
+
+                                        // incresing timestamp 1 sec to force update the ecoded value
+                                        // for same timestamp, cassandra uses lexical order which can prevent ecoded value to update whole value
+
+                                        current_timestamp+=1; // force update new value
+
+                                        mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", coded_value);
+                                        Mutation ECmutation = mutationBuilder.build();
+
+                                        applyInternal(ECmutation, makeDurable, true, isDroppable, true, future);
+                                        return future;
+                                    }
+                                }
+                            }
+
+                            Tracing.trace("local reading for EC Storage layer");
+
+                        }
+
+                    }
+                    catch (CharacterCodingException e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
+
+            }
+        }
+        else
+        {
+            //logger.info("Null pointer exception");
+        }
+
+
+
+        //Raj debug end
+
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
