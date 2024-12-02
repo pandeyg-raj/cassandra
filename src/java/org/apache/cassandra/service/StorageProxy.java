@@ -1178,15 +1178,15 @@ public class StorageProxy implements StorageProxyMBean
                     {
                         for (Cell cell : data.cells())
                         {
-                            logger.info("Raj StorageProxy mutation with followinf details already applied ");
-                            logger.info("Raj StorageProxy key is " + mutation.key().toString());
+                            //logger.info("Raj StorageProxy mutation with followinf details already applied ");
+                            //logger.info("Raj StorageProxy key is " + mutation.key().toString());
                             if (cell.column().name.toString().equals("data"))
                             {
                                 try
                                 {
                                     value = ByteBufferUtil.string(cell.buffer());
-                                    logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
-                                    logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
+                                    //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
+                                    //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
                                     Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                     long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                                     TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
