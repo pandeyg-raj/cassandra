@@ -24,7 +24,7 @@ import java.util.HashMap;
 public class ECConfig
 {
     public final static int num_server = 2;
-    public final static int num_recover = 1;
+    public final static int num_recover = 2;
 
     public final static int num_concurrecy = 3;
     public final static int num_intersect = 1;

@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -68,7 +69,8 @@ public class ErasureCode
 
 
         ByteBuffer.wrap(allBytes).putInt(valueSize);
-        InputStream in = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
+        //InputStream in = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
+        InputStream in = new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8));
 
         try {
             in.read(allBytes, BYTES_IN_INT, valueSize);
@@ -132,6 +134,8 @@ public class ErasureCode
             e.printStackTrace();
         }
 
-        return out.toString();
+        return out.toString().trim();
+
+
     }
 }

@@ -2183,6 +2183,9 @@ public class StorageProxy implements StorageProxyMBean
                 readMetrics.remoteRequests.mark();
         }
 
+        // raj debug start
+        // I have modified executeAsync() to send full data request (not just digest) to ALL replica
+        // raj debug end
         // sends a data request to the closest replica, and a digest request to the others. If we have a speculating
         // read executoe, we'll only send read requests to enough replicas to satisfy the consistency level
         for (int i=0; i<cmdCount; i++)

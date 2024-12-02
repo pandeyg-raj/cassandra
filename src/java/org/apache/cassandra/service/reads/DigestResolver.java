@@ -24,19 +24,38 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.cassandra.db.DecoratedKey;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.ReadResponse;
+import org.apache.cassandra.db.RegularAndStaticColumns;
 import org.apache.cassandra.db.SinglePartitionReadCommand;
 import org.apache.cassandra.db.partitions.PartitionIterator;
+import org.apache.cassandra.db.partitions.PartitionUpdate;
+import org.apache.cassandra.db.partitions.SingletonUnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
+import org.apache.cassandra.db.rows.BTreeRow;
+import org.apache.cassandra.db.rows.Row;
+import org.apache.cassandra.db.rows.UnfilteredRowIterator;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.Replica;
 import org.apache.cassandra.locator.InetAddressAndPort;
 import org.apache.cassandra.locator.ReplicaPlan;
 import org.apache.cassandra.net.Message;
+import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.reads.repair.NoopReadRepair;
 import org.apache.cassandra.transport.Dispatcher;
 import org.apache.cassandra.utils.ByteBufferUtil;
+
+// raj debug start
+import java.util.List;
+import java.util.ArrayList;
+import org.apache.cassandra.db.rows.Cell;
+import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.db.rows.RowIterator;
+import org.apache.cassandra.schema.ColumnMetadata;
+
+//raj debug end
 
 import static com.google.common.collect.Iterables.any;
 import static org.apache.cassandra.utils.Clock.Global.nanoTime;
@@ -74,6 +93,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         && replicaPlan().lookup(msg.from()).isTransient());
     }
 
+
     public PartitionIterator getData()
     {
         Collection<Message<ReadResponse>> responses = this.responses.snapshot();
@@ -100,6 +120,154 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
             return dataResolver.resolve();
         }
+    }
+
+    public ReadResponse modifyCellValue(ReadResponse originalResponse,String encoded_value) {
+        // Extract the data from the original response
+        PartitionIterator partitions = UnfilteredPartitionIterators.filter(originalResponse.makeIterator(command), command.nowInSec());
+        // Create a new PartitionIterator to hold the modified data
+
+        // Use a builder to collect the modified partitions
+        ReadResponse resp = null;
+
+        while (partitions.hasNext()) {
+            try (RowIterator rows = partitions.next()) {
+                TableMetadata tableMetadata  = rows.metadata();
+                DecoratedKey partitionKey = rows.partitionKey();
+                RegularAndStaticColumns clm = rows.columns();
+
+                PartitionUpdate.Builder builder =  new PartitionUpdate.Builder(tableMetadata, partitionKey,clm,1,false);
+
+                // Traverse rows and modify the target cell
+                while (rows.hasNext()) {
+                    Row row = rows.next();
+                    Row.Builder rowBuilder = BTreeRow.sortedBuilder();
+
+                    // Copy clustering
+                    rowBuilder.newRow(row.clustering());
+
+                    // Traverse cells
+                    for (Cell<?> cell : row.cells()) {
+                        if (cell.column().name.toString().equals("data")) {
+                            // Modify target cell
+                            rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
+                        } else {
+                            // Copy existing cells
+                            //rowBuilder.addCell(cell);
+                        }
+                    }
+
+                    // Add modified row to partition builder
+                    builder.add(rowBuilder.build());
+                }
+                PartitionUpdate partitionUpdate = builder.build();
+                UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
+                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
+
+            }
+        }
+
+        // Create a new ReadResponse with modified data
+        return resp;
+    }
+
+    public boolean isMyRead()
+    {
+        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes("data"));
+        boolean isMyRead = (tagMetadata != null);
+        return isMyRead;
+    }
+
+    public PartitionIterator myCombineResponse()
+    {
+        ReadResponse maxZResponse = null;
+        List<String> codelist = new ArrayList<>();
+
+        int numMessage = 0;
+        ReadResponse tmp = null;
+        Collection<Message<ReadResponse>> snapshot = responses.snapshot();
+        for (Message<ReadResponse> message : snapshot)
+        {
+
+            ReadResponse response = message.payload;
+            tmp = message.payload;
+
+            // check if the response is indeed a data response
+            // we shouldn't get a digest response here
+            assert response.isDigestResponse() == false;
+
+            // get the partition iterator corresponding to the
+            // current data response
+            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), command.nowInSec());
+
+            // get the z value column
+            while(pi.hasNext())
+            {
+                // pi.next() returns a RowIterator
+                RowIterator ri = pi.next();
+
+                while(ri.hasNext())
+                {
+                    // todo: the entire row is read for the sake of development
+                    // future improvement could be made
+                    ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes("data"));
+                    try
+                    {
+                        Cell c = ri.next().getCell(colMeta); // ri.next() = Row
+                        String value = "";
+
+                        value = ByteBufferUtil.string(c.buffer());
+                        codelist.add(value);
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                        return null;
+                    }
+
+                }
+            }
+            numMessage++;
+        }
+
+
+        int maxlength = -1;
+        for (int i = 0; i < codelist.size(); i++) {
+            String value = codelist.get(i);
+            if (value != null && ! value.isEmpty()) {
+                int tmplength = ECConfig.stringToByte(value).length;
+                if(tmplength > maxlength)
+                {
+                    maxlength = tmplength;
+                }
+            }
+        }
+
+        // decode and combine values
+        boolean []shardPresent = new boolean[codelist.size()];  // 2 for two server response
+        byte[][] decodeMatrix = new byte[codelist.size()][maxlength];
+
+        for (int i = 0; i < codelist.size(); i++) {
+
+            String value = codelist.get(i);
+
+            if (value == null || value.isEmpty() ) {
+                decodeMatrix[i] = new byte[maxlength];
+            }
+
+            else {
+                //count++;
+                byte[] replica_array = ECConfig.stringToByte(value);
+                decodeMatrix[i] = replica_array;
+                shardPresent[i] = true;
+            }
+        }
+        String skey = "";
+        String encoded_value ="";
+        encoded_value = new ErasureCode().decodeData(decodeMatrix, shardPresent, maxlength, skey);
+        ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
+        return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+
     }
 
     public boolean responsesMatch()

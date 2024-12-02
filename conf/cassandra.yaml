@@ -217,8 +217,8 @@ network_authorizer: AllowAllNetworkAuthorizer
 #   system_auth tables being used by this feature may be lost when a host goes down.
 cidr_authorizer:
   class_name: AllowAllCIDRAuthorizer
-  # Below parameters are used only when CIDR authorizer is enabled
-  # parameters:
+    # Below parameters are used only when CIDR authorizer is enabled
+    # parameters:
     # CIDR authorizer when enabled, i.e, CassandraCIDRAuthorizer, is applicable for non-superusers only by default.
     # Set this setting to true, to enable CIDR authorization for superusers as well.
     # Note: CIDR checks cannot be performed for JMX calls
@@ -235,8 +235,8 @@ cidr_authorizer:
     # Refresh interval for CIDR groups cache, this value is considered in minutes
     # cidr_groups_cache_refresh_interval: 5
 
-    # Maximum number of entries an IP to CIDR groups cache can accommodate
-    # ip_cache_max_size: 100
+  # Maximum number of entries an IP to CIDR groups cache can accommodate
+  # ip_cache_max_size: 100
 
 # Depending on the auth strategy of the cluster, it can be beneficial to iterate
 # from root to table (root -> ks -> table) instead of table to root (table -> ks -> root).
@@ -350,7 +350,7 @@ partitioner: org.apache.cassandra.dht.Murmur3Partitioner
 # them by partitioning the token ranges.
 # If not set, the default directory is $CASSANDRA_HOME/data/data.
 data_file_directories:
-     - /hardDisk/cassandraData
+  - /hardDisk/cassandraData
 
 # Directory were Cassandra should store the data of the local system keyspaces.
 # By default Cassandra will store the data of the local system keyspaces in the first of the data directories specified
@@ -1071,8 +1071,8 @@ rpc_keepalive: true
 # Set to true to have Cassandra create a hard link to each sstable
 # flushed or streamed locally in a backups/ subdirectory of all the
 # keyspace data in this node.  Removing these links is the operator's
-# responsibility. The operator can also turn off incremental backups 
-# for specified table by setting table parameter incremental_backups to 
+# responsibility. The operator can also turn off incremental backups
+# for specified table by setting table parameter incremental_backups to
 # false, which is set to true by default. See CASSANDRA-15402
 incremental_backups: false
 
@@ -1452,10 +1452,10 @@ slow_query_log_timeout: 500ms
 #    domain and get its respective value.
 #
 # CloudstackSnitch:
-#    A snitch that assumes a Cloudstack Zone follows the typical convention 
+#    A snitch that assumes a Cloudstack Zone follows the typical convention
 #    country-location-az and uses a country/location tuple as a datacenter
 #    and the availability zone as a rack.
-#    WARNING: This snitch is deprecated and it is scheduled to be removed 
+#    WARNING: This snitch is deprecated and it is scheduled to be removed
 #    in the next major version of Cassandra.
 #
 # Ec2Snitch:
@@ -1569,8 +1569,8 @@ server_encryption_options:
   # containing server certificate to create SSLContext and
   # outbound connections (acting as clients) use outbound_keystore & outbound_keystore_password with client certificates
   # to create SSLContext. By default, outbound_keystore is the same as keystore indicating mTLS is not enabled.
-#  outbound_keystore: conf/.keystore
-#  outbound_keystore_password: cassandra
+  #  outbound_keystore: conf/.keystore
+  #  outbound_keystore_password: cassandra
   # Verify peer server certificates
   require_client_auth: false
   # Set to a valid trustore if require_client_auth is true
@@ -1690,8 +1690,8 @@ transparent_data_encryption_options:
           store_type: JCEKS
           key_password: cassandra
 
-# Storage Attached Indexing options.
-# sai_options:
+  # Storage Attached Indexing options.
+  # sai_options:
   ## Total permitted memory allowed for writing SAI index segments. This memory
   ## is split between all SAI indexes being built so more indexes will mean smaller
   ## segment sizes.
@@ -1719,19 +1719,19 @@ tombstone_failure_threshold: 100000
 # mechanism materializes replica results by partition on-heap at the coordinator. The more possibly
 # stale results returned by the replicas, the more rows materialized during the query.
 replica_filtering_protection:
-    # These thresholds exist to limit the damage severely out-of-date replicas can cause during these
-    # queries. They limit the number of rows from all replicas individual index and filtering queries
-    # can materialize on-heap to return correct results at the desired read consistency level.
-    #
-    # "cached_replica_rows_warn_threshold" is the per-query threshold at which a warning will be logged.
-    # "cached_replica_rows_fail_threshold" is the per-query threshold at which the query will fail.
-    #
-    # These thresholds may also be adjusted at runtime using the StorageService mbean.
-    #
-    # If the failure threshold is breached, it is likely that either the current page/fetch size
-    # is too large or one or more replicas is severely out-of-sync and in need of repair.
-    cached_rows_warn_threshold: 2000
-    cached_rows_fail_threshold: 32000
+  # These thresholds exist to limit the damage severely out-of-date replicas can cause during these
+  # queries. They limit the number of rows from all replicas individual index and filtering queries
+  # can materialize on-heap to return correct results at the desired read consistency level.
+  #
+  # "cached_replica_rows_warn_threshold" is the per-query threshold at which a warning will be logged.
+  # "cached_replica_rows_fail_threshold" is the per-query threshold at which the query will fail.
+  #
+  # These thresholds may also be adjusted at runtime using the StorageService mbean.
+  #
+  # If the failure threshold is breached, it is likely that either the current page/fetch size
+  # is too large or one or more replicas is severely out-of-sync and in need of repair.
+  cached_rows_warn_threshold: 2000
+  cached_rows_fail_threshold: 32000
 
 # Log WARN on any multiple-partition batch size exceeding this value. 5KiB per batch by default.
 # Caution should be taken on increasing the size of this threshold as it can lead to node instability.
@@ -1811,9 +1811,9 @@ audit_logging_options:
   # archive_command:
   # max_archive_retries: 10
 
-# default options for full query logging - these can be overridden from command line when executing
-# nodetool enablefullquerylog
-# full_query_logging_options:
+  # default options for full query logging - these can be overridden from command line when executing
+  # nodetool enablefullquerylog
+  # full_query_logging_options:
   # log_dir:
   # roll_cycle: HOURLY
   # block: true

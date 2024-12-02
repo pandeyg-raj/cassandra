@@ -41,11 +41,13 @@ import org.apache.cassandra.locator.ReplicaPlan;
 import org.apache.cassandra.locator.ReplicaPlans;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
+import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.service.StorageProxy.LocalReadRunnable;
 import org.apache.cassandra.service.reads.repair.ReadRepair;
 import org.apache.cassandra.tracing.TraceState;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
+import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
 
 import static com.google.common.collect.Iterables.all;
@@ -178,7 +180,9 @@ public abstract class AbstractReadExecutor
     public void executeAsync()
     {
         EndpointsForToken selected = replicaPlan().contacts();
-        EndpointsForToken fullDataRequests = selected.filter(Replica::isFull, initialDataRequestCount);
+        // raj debug start , send full data request to all
+        EndpointsForToken fullDataRequests = replicaPlan().contacts(); // selected.filter(Replica::isFull, initialDataRequestCount);
+        // raj debug end
         makeFullDataRequests(fullDataRequests);
         makeTransientDataRequests(selected.filterLazily(Replica::isTransient));
         makeDigestRequests(selected.filterLazily(r -> r.isFull() && !fullDataRequests.contains(r)));
@@ -423,6 +427,16 @@ public abstract class AbstractReadExecutor
                 throw e;
             }
         }
+
+        // raj debug start
+
+        // combine and set the final value
+        if(digestResolver.isMyRead())
+        {
+            setResult(digestResolver.myCombineResponse());
+            return;
+        }
+        // raj debug end
 
         // return immediately, or begin a read repair
         if (digestResolver.responsesMatch())
