@@ -43,6 +43,7 @@ import org.apache.cassandra.locator.ReplicaPlan;
 import org.apache.cassandra.net.Message;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.reads.repair.NoopReadRepair;
+import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
@@ -186,6 +187,11 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         int numMessage = 0;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
+        if( snapshot.size() < ECConfig.num_recover )
+        {
+            Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.num_recover);
+        }
+
         for (Message<ReadResponse> message : snapshot)
         {
 
@@ -265,6 +271,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         String skey = "";
         String encoded_value ="";
         encoded_value = new ErasureCode().decodeData(decodeMatrix, shardPresent, maxlength, skey);
+        //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
+        logger.info("Read Returning: encoded value is "+ encoded_value);
+
         ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
         return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
 

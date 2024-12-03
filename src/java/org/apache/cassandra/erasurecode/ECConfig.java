@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.erasurecode;
 
+import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.HashMap;
 
@@ -40,12 +41,15 @@ public class ECConfig
 
     // Convert the byte array to String to send back to client
     public static String byteToString(byte[] bytes) {
-        return Base64.getEncoder().encodeToString(bytes);
+        //return Base64.getEncoder().encodeToString(bytes);
+        return new String(bytes, Charset.forName("UTF-8"));
     }
 
     // Convert incoming String value
     public static byte[] stringToByte(String value) {
-        return Base64.getDecoder().decode(value);
+        //return Base64.getDecoder().decode(value);
+        return value.getBytes(Charset.forName("UTF-8"));
+
     }
 
     // Create the Empty Codes based on what I set

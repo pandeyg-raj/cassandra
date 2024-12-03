@@ -433,9 +433,11 @@ public abstract class AbstractReadExecutor
         // combine and set the final value
         if(digestResolver.isMyRead())
         {
+            logger.info("RAJ Its My read");
             setResult(digestResolver.myCombineResponse());
             return;
         }
+        logger.info("Raj Not Its My read");
         // raj debug end
 
         // return immediately, or begin a read repair

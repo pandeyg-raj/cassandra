@@ -550,7 +550,7 @@ public class Keyspace
         {
             for (Cell cell : data.cells())
             {
-                logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
+                //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
                 if (cell.column().name.toString().equals("data"))
                 {
                     try
