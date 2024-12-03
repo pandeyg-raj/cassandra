@@ -437,7 +437,7 @@ public abstract class AbstractReadExecutor
             setResult(digestResolver.myCombineResponse());
             return;
         }
-        logger.info("Raj Not Its My read");
+
         // raj debug end
 
         // return immediately, or begin a read repair

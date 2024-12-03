@@ -114,6 +114,9 @@ public class QueryMessage extends Message.Request
 
             QueryHandler queryHandler = ClientState.getCQLQueryHandler();
             statement = queryHandler.parse(query, state, options);
+
+            logger.info("Raj incoming Request Query : "+ query);
+
             Message.Response response = queryHandler.process(statement, state, options, getCustomPayload(), requestTime);
             QueryEvents.instance.notifyQuerySuccess(statement, query, options, state, queryStartTime, response);
 

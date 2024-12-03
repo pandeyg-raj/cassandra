@@ -559,7 +559,7 @@ public class Keyspace
                         if (value.equals("signal"))
                         {
                             Tracing.trace("EC Signal received at Storage layer");
-                            logger.info("Raj KeySpace column is: " + cell.column().name.toString() + " value is " + value);
+                            logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -603,7 +603,8 @@ public class Keyspace
                                         mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", coded_value);
                                         Mutation ECmutation = mutationBuilder.build();
 
-                                        applyInternal(ECmutation, makeDurable, true, isDroppable, true, future);
+                                        applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
+                                        logger.info("Raj  Storage Proxy , ECoded value written. original value:" + local_value);
                                         return future;
                                     }
                                 }

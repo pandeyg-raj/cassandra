@@ -1169,6 +1169,8 @@ public class StorageProxy implements StorageProxyMBean
                 Tracing.trace("Write starting outside");
                 mutate(mutations, consistencyLevel, requestTime);
                 Tracing.trace("Write finished outside");
+
+
                 // Raj debug start
                 for (IMutation mutation : mutations)
                 {
@@ -1197,6 +1199,8 @@ public class StorageProxy implements StorageProxyMBean
                                     Tracing.trace("Write sending EC signal outside");
                                     mutate(signalMutations, consistencyLevel, requestTime);
                                     Tracing.trace("Write  EC signal finished outside");
+
+
                                 }
                                 catch (Exception e)    //catch (CharacterCodingException e)
                                 {
@@ -2165,6 +2169,7 @@ public class StorageProxy implements StorageProxyMBean
                                                Dispatcher.RequestTime requestTime)
     throws UnavailableException, ReadFailureException, ReadTimeoutException
     {
+
         int cmdCount = commands.size();
 
         AbstractReadExecutor[] reads = new AbstractReadExecutor[cmdCount];
@@ -2173,6 +2178,7 @@ public class StorageProxy implements StorageProxyMBean
         // for type of speculation we'll use in this read
         for (int i=0; i<cmdCount; i++)
         {
+            logger.info("Raj storage proxy incoming new Read for keyspace: "+ commands.get(i).metadata().keyspace);
             reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
                                                             consistencyLevel,
                                                             requestTime);

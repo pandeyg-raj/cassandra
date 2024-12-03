@@ -331,6 +331,7 @@ public class SelectStatement implements CQLStatement.SingleKeyspaceCqlStatement
 
         ReadQuery query = getQuery(options, state.getClientState(), selectors.getColumnFilter(), nowInSec, limit);
 
+
         if (options.isReadThresholdsEnabled())
             query.trackWarnings();
         ResultMessage.Rows rows;

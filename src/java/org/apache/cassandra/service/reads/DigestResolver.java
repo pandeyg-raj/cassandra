@@ -175,6 +175,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
     public boolean isMyRead()
     {
         ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes("data"));
+        //logger.info("Raj Read for keyspace: "+ command.metadata().keyspace);
         boolean isMyRead = (tagMetadata != null);
         return isMyRead;
     }
