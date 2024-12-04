@@ -236,7 +236,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             }
             numMessage++;
         }
-
+        /*
 
         int maxlength = -1;
         for (int i = 0; i < codelist.size(); i++) {
@@ -269,11 +269,15 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 shardPresent[i] = true;
             }
         }
+
         String skey = "";
+         */
         String encoded_value ="";
-        encoded_value = new ErasureCode().decodeData(decodeMatrix, shardPresent, maxlength, skey);
+        //encoded_value = new ErasureCode().decodeData(decodeMatrix, shardPresent, maxlength, skey);
+
+        encoded_value = codelist.get(0) + codelist.get(1) ;
         //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
-        logger.info("Read Returning: encoded value is "+ encoded_value);
+        logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
         ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
         return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());

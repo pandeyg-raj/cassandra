@@ -586,11 +586,13 @@ public class Keyspace
 
                                         String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
                                         // finish encode data
-                                        byte [][]encodeMatrix = new ErasureCode().encodeData(local_value);
+                                        //byte [][]encodeMatrix = new ErasureCode().encodeData(local_value);
                                         //Tracing.trace("ECing value {} Storage layer",local_value);
-                                        String coded_value  =  ECConfig.byteToString(encodeMatrix[0]);
+                                        //String coded_value  =  ECConfig.byteToString(encodeMatrix[0]);
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
+
+                                        String coded_value = local_value.substring(local_value.length()/2);
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
