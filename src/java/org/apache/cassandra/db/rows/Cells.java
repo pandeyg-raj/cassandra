@@ -83,6 +83,17 @@ public abstract class Cells
         if (leftTimestamp != rightTimestamp)
             return leftTimestamp > rightTimestamp ? left : right;
 
+        // raj debug start
+        if(leftTimestamp == rightTimestamp)
+        {
+            // id column name is data blindly have latest (right?) update
+            if(left.column().name.toString().compareTo("data") == 0 )
+            {
+                return right;
+            }
+        }
+        // raj debug end
+
         long leftLocalDeletionTime = left.localDeletionTime();
         long rightLocalDeletionTime = right.localDeletionTime();
 
