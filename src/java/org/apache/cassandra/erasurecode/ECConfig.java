@@ -17,26 +17,21 @@
  */
 
 package org.apache.cassandra.erasurecode;
-
-import java.nio.charset.Charset;
 import java.util.Base64;
 import java.util.HashMap;
 
 public class ECConfig
 {
-    public final static int num_server = 2;
-    public final static int num_recover = 2;
+    public final static int DATA_SHARDS = 2;
+    public final static int PARITY_SHARDS = 1;
+    public final static int TOTAL_SHARDS = 3;
+    //public final static int num_intersect = 1;
 
-    public final static int num_concurrecy = 3;
-    public final static int num_intersect = 1;
-
-    public static final String[] ADDRESSES = {"10.142.0.98", "10.142.0.95","10.142.0.96","10.142.0.94","10.142.0.97"
-                                                ,"10.142.0.100", "10.142.0.99", "10.142.0.102", "10.142.0.103", "10.142.0.101",
-                                              "10.142.0.104"};
+    public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.106"};
 
     private static HashMap<String, Integer> map = new HashMap<>();
 
-    public static final int QUORUM = (int) Math.ceil ( (ECConfig.num_server + ECConfig.num_intersect) / 2);
+    //public static final int QUORUM = (int) Math.ceil ( (ECConfig.num_server + ECConfig.num_intersect) / 2);
 
 
     // Convert the byte array to String to send back to client

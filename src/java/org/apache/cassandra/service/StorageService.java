@@ -134,6 +134,7 @@ import org.apache.cassandra.dht.RangeStreamer.FetchReplica;
 import org.apache.cassandra.dht.StreamStateStore;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.dht.Token.TokenFactory;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.UnavailableException;
@@ -1047,6 +1048,10 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         }
 
         completeInitialization();
+
+        //raj debug start
+        ECConfig.initiateAddressMap();
+        //raj debug end
     }
 
     @VisibleForTesting

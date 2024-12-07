@@ -20,12 +20,8 @@ package org.apache.cassandra.erasurecode;
 import com.backblaze.erasure.ReedSolomon;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
@@ -35,46 +31,33 @@ import org.slf4j.LoggerFactory;
 public class ErasureCode
 {
 
-    public static final int DATA_SHARDS = ECConfig.num_recover;
-    public static final int PARITY_SHARDS = ECConfig.num_server - ECConfig.num_recover;
-    public static final int TOTAL_SHARDS = ECConfig.num_server;
+    public static final int DATA_SHARDS = ECConfig.DATA_SHARDS;
+    public static final int PARITY_SHARDS = ECConfig.PARITY_SHARDS ;
+    public static final int TOTAL_SHARDS = ECConfig.TOTAL_SHARDS ;
     private static final Logger logger = LoggerFactory.getLogger(ErasureCode.class);
 
-    public static final int BYTES_IN_INT = 4;
+    public  byte [] []  MyEncode (String inputFile) throws IOException
+    {
+        // Get the size of the input file.  (Files bigger that  Integer.MAX_VALUE will fail here!)
 
-//    public static ReedSolomon getReedSolomon () {
-//        if (reedSolomon == null) {
-//            reedSolomon = ReedSolomon.create(ECConfig.num_recover, ECConfig.num_server - ECConfig.num_recover);
-//        }
-//        return reedSolomon;
-//    }
-
-    //Can make this function static since String is immutable
-    public byte[][] encodeData(String value) {
-        //logger.debug("The value is" + value);
-        ReedSolomon reedSolomon = ReedSolomon.create(ECConfig.num_recover, ECConfig.num_server - ECConfig.num_recover);
-        final int valueSize =  value.length();
-        //logger.debug("Inside encodeData");
-
-        // Figure out how big each shard will be.  The total size stored
-        // will be the file size (8 bytes) plus the file.
-        final int storedSize = valueSize + BYTES_IN_INT;
+        final int fileSize = (int) inputFile.length();
+        // Figure out how big each shard will be.  .
+        final int storedSize = fileSize ; // + BYTES_IN_INT;
         final int shardSize = (storedSize + DATA_SHARDS - 1) / DATA_SHARDS;
-
 
         // Create a buffer holding the file size, followed by
         // the contents of the file.
         final int bufferSize = shardSize * DATA_SHARDS;
         final byte [] allBytes = new byte[bufferSize];
-
-
-        ByteBuffer.wrap(allBytes).putInt(valueSize);
-        //InputStream in = new ByteArrayInputStream(value.getBytes(Charset.forName("UTF-8")));
-        InputStream in = new ByteArrayInputStream(value.getBytes(StandardCharsets.UTF_8));
+        //ByteBuffer.wrap(allBytes).putInt(fileSize);
+        //InputStream in = new FileInputStream(inputFile);
+        InputStream in = new ByteArrayInputStream( inputFile.getBytes(StandardCharsets.UTF_8));
+        // int bytesRead = in.read(allBytes, BYTES_IN_INT, fileSize);
+        int bytesRead =0;
 
         try {
-            in.read(allBytes, BYTES_IN_INT, valueSize);
-        } catch (IOException e) {
+            bytesRead = in.read(allBytes, 0, fileSize);
+        }  catch (IOException e) {
             e.printStackTrace();
         } finally
         {
@@ -87,6 +70,9 @@ public class ErasureCode
                 e.printStackTrace();
             }
         }
+        if (bytesRead != fileSize) {
+            throw new IOException("not enough bytes read");
+        }
 
         // Make the buffers to hold the shards.
         byte [] [] shards = new byte [TOTAL_SHARDS] [shardSize];
@@ -95,47 +81,36 @@ public class ErasureCode
         for (int i = 0; i < DATA_SHARDS; i++) {
             System.arraycopy(allBytes, i * shardSize, shards[i], 0, shardSize);
         }
-
+        //  for (int i = 0; i < TOTAL_SHARDS; i++) {
+        //     System.out.println("before encode" + new String( shards[i], StandardCharsets.UTF_8));
+        //}
         // Use Reed-Solomon to calculate the parity.
-        //logger.debug("Before Encode Parity");
+        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
         reedSolomon.encodeParity(shards, 0, shardSize);
-//        logger.debug("Coding looks like the folliowing");
-//        for (int i = 0; i < shards.length; i++) {
-//            logger.debug(ECConfig.byteToString(shards[i]));
-//        }
+
         return shards;
     }
 
-    // Cannot make is static since our input is mutatble
-    public String decodeData(byte[][] shards, boolean []shardPresent, int shardSize, String key) {
-        ReedSolomon reedSolomon = ReedSolomon.create(ECConfig.num_recover, ECConfig.num_server - ECConfig.num_recover);
+    public  byte []  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize ) throws IOException
+    {
+
+        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
+
+
         reedSolomon.decodeMissing(shards, shardPresent, 0, shardSize);
 
-        byte [] decodeBytes = new byte[shardSize * DATA_SHARDS];
 
-        //System.out.println("valueSize is" + shardSize);
+        byte [] NewallBytes = new byte [shardSize * DATA_SHARDS];
+
+        long startTime = System.nanoTime();
+
         for (int i = 0; i < DATA_SHARDS; i++) {
-            System.arraycopy(shards[i], 0, decodeBytes, shardSize * i, shardSize);
+            System.arraycopy(shards[i], 0, NewallBytes, shardSize * i, shardSize);
         }
+        long stopTime = System.nanoTime();
+        System.out.println((stopTime - startTime)/1000);
 
-//        int valueSize = ByteBuffer.wrap(decodeBytes).getInt();
-
-        int valueSize = decodeBytes.length - 4;
-
-        OutputStream out = new ByteArrayOutputStream();
-
-        try
-        {
-            //logger.debug(decodeBytes.length + " " + valueSize + " " + key);
-            out.write(decodeBytes, BYTES_IN_INT, valueSize);
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-        return out.toString().trim();
-
-
+        return NewallBytes;
+        // //return new String( NewallBytes, StandardCharsets.UTF_8).trim();
     }
 }

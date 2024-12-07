@@ -51,7 +51,6 @@ import org.apache.cassandra.utils.ByteBufferUtil;
 import java.util.List;
 import java.util.ArrayList;
 import org.apache.cassandra.db.rows.Cell;
-import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.schema.ColumnMetadata;
@@ -188,9 +187,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         int numMessage = 0;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
-        if( snapshot.size() < ECConfig.num_recover )
+        if( snapshot.size() < ECConfig.DATA_SHARDS )
         {
-            Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.num_recover);
+            Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
         }
 
         for (Message<ReadResponse> message : snapshot)

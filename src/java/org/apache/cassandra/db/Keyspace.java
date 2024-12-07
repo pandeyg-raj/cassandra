@@ -18,7 +18,6 @@
 package org.apache.cassandra.db;
 
 import java.io.IOException;
-import java.nio.charset.CharacterCodingException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -586,22 +585,22 @@ public class Keyspace
 
                                         String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
                                         // finish encode data
-                                        //byte [][]encodeMatrix = new ErasureCode().encodeData(local_value);
+                                        byte [][]encodeMatrix = new ErasureCode().MyEncode(local_value);
                                         //Tracing.trace("ECing value {} Storage layer",local_value);
-                                        //String coded_value  =  ECConfig.byteToString(encodeMatrix[0]);
+
+                                        // get the code index from ip address
+                                        String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
+
+                                        // find code index corresponding to ip
+                                        int codeIndex = ECConfig.getAddressMap().get(myLocalIP);
+                                        String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
 
-                                        String coded_value = local_value.substring(0,local_value.length()/2);
-                                        logger.info("writin coded value " + coded_value + "original " + local_value);
-                                        if(coded_value.equals("mango") && local_value.equals("mango"))
-                                        {
+                                        //String coded_value = local_value.substring(0,local_value.length()/2);
+                                        logger.info("writin coded value at index " + codeIndex);
+                                        //logger.info("writin coded value " + coded_value + "original " + local_value);
 
-                                        }
-                                        else
-                                        {
-                                            logger.info("problem");
-                                        }
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
 
@@ -625,7 +624,7 @@ public class Keyspace
                         }
 
                     }
-                    catch (CharacterCodingException e)
+                    catch (IOException e)
                     {
                         e.printStackTrace();
                     }
