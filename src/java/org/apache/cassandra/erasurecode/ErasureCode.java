@@ -91,7 +91,7 @@ public class ErasureCode
         return shards;
     }
 
-    public  byte []  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize ) throws IOException
+    public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize ) throws IOException
     {
 
         ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
@@ -110,7 +110,7 @@ public class ErasureCode
         long stopTime = System.nanoTime();
         System.out.println((stopTime - startTime)/1000);
 
-        return NewallBytes;
-        // //return new String( NewallBytes, StandardCharsets.UTF_8).trim();
+        //return NewallBytes;
+         return new String( NewallBytes, StandardCharsets.UTF_8).trim();
     }
 }

@@ -17,7 +17,9 @@
  */
 package org.apache.cassandra.service.reads;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +38,8 @@ import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
 import org.apache.cassandra.db.rows.BTreeRow;
 import org.apache.cassandra.db.rows.Row;
 import org.apache.cassandra.db.rows.UnfilteredRowIterator;
+import org.apache.cassandra.erasurecode.ECResponse;
+import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.Replica;
 import org.apache.cassandra.locator.InetAddressAndPort;
@@ -48,8 +52,6 @@ import org.apache.cassandra.transport.Dispatcher;
 import org.apache.cassandra.utils.ByteBufferUtil;
 
 // raj debug start
-import java.util.List;
-import java.util.ArrayList;
 import org.apache.cassandra.db.rows.Cell;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.db.rows.RowIterator;
@@ -153,7 +155,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
                         } else {
                             // Copy existing cells
-                            //rowBuilder.addCell(cell);
+                            rowBuilder.addCell(cell);
                         }
                     }
 
@@ -181,10 +183,6 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
     public PartitionIterator myCombineResponse()
     {
-        ReadResponse maxZResponse = null;
-        List<String> codelist = new ArrayList<>();
-
-        int numMessage = 0;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
         if( snapshot.size() < ECConfig.DATA_SHARDS )
@@ -192,9 +190,14 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
         }
 
+        ECResponse[] ecResponses = new ECResponse[snapshot.size()];
+        int TmpIndex = 0;
         for (Message<ReadResponse> message : snapshot)
         {
-
+            String messageSender = message.from().getHostAddress(false);
+            int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
+            ecResponses[TmpIndex] = new ECResponse();
+            ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
             ReadResponse response = message.payload;
             tmp = message.payload;
 
@@ -220,10 +223,11 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     try
                     {
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
-                        String value = "";
-
-                        value = ByteBufferUtil.string(c.buffer());
-                        codelist.add(value);
+                        String value = ByteBufferUtil.string(c.buffer());
+                        ecResponses[TmpIndex].setEcCode(value);
+                        ecResponses[TmpIndex].setCodeTimestamp(c.timestamp());
+                        ecResponses[TmpIndex].setCodeAvailable(true);
+                        ecResponses[TmpIndex].setCodeLength(value.length());
                     }
                     catch (Exception e)
                     {
@@ -233,53 +237,88 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
                 }
             }
-            numMessage++;
+            TmpIndex++;
         }
-        /*
 
-        int maxlength = -1;
-        for (int i = 0; i < codelist.size(); i++) {
-            String value = codelist.get(i);
-            if (value != null && ! value.isEmpty()) {
-                int tmplength = ECConfig.stringToByte(value).length;
-                if(tmplength > maxlength)
-                {
-                    maxlength = tmplength;
-                }
+
+        // verify if decoding needed
+        // no decodign needed if all data fragment present, just combine and return
+        // no decoding needed/possible if whole data presend or not enough codes available
+
+
+        // check if all "DATA" codes available
+        boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
+        for (ECResponse ecResponse : ecResponses)
+        {
+            isCodeavailable[ecResponse.getEcCodeIndex()] = ecResponse.isCodeAvailable();
+        }
+
+        boolean IsEcDeccodeNeeded = false;
+        for(int i=0;i<ECConfig.DATA_SHARDS;i++)
+        {
+            if(!isCodeavailable[i])
+            {
+                IsEcDeccodeNeeded = true;
             }
         }
+
+        int ShardSize = ecResponses[0].getCodeLength();
+        if(!IsEcDeccodeNeeded)
+        {
+            // just combine and return
+            String encoded_value = "";
+            for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+                encoded_value = encoded_value + ecResponses[i].getEcCode();
+            }
+            ReadResponse tmpp = modifyCellValue(tmp,encoded_value);// should use trim() ?
+            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+        }
+
+
 
         // decode and combine values
-        boolean []shardPresent = new boolean[codelist.size()];  // 2 for two server response
-        byte[][] decodeMatrix = new byte[codelist.size()][maxlength];
 
-        for (int i = 0; i < codelist.size(); i++) {
+        byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 
-            String value = codelist.get(i);
+        for (int i = 0; i < ecResponses.length; i++) {
 
-            if (value == null || value.isEmpty() ) {
-                decodeMatrix[i] = new byte[maxlength];
+            if(ecResponses[i].isCodeAvailable())  // code available, set corresponding index
+            {
+                String value = ecResponses[i].getEcCode();
+                decodeMatrix[ecResponses[i].getEcCodeIndex()] = value.getBytes(StandardCharsets.UTF_8);
             }
+            else // code not available , should not be the case as response should haava a code
+            {
 
-            else {
-                //count++;
-                byte[] replica_array = ECConfig.stringToByte(value);
-                decodeMatrix[i] = replica_array;
-                shardPresent[i] = true;
+            }
+        }
+        // for the rewponses code not available aallocate empty space
+
+        for( int i=0;i<isCodeavailable.length;i++)
+        {
+            if (!isCodeavailable[i])
+            {
+                decodeMatrix[i] = new byte[ShardSize];
             }
         }
 
-        String skey = "";
-         */
-        String encoded_value ="";
-        //encoded_value = new ErasureCode().decodeData(decodeMatrix, shardPresent, maxlength, skey);
 
-        encoded_value = codelist.get(0) + codelist.get(1) ;
-        //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
-        logger.info("Read Returning: encoded main computer value is "+ encoded_value);
+        try
+        {
+            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize);
+            // encoded_value = codelist.get(0) + codelist.get(1) ;
+            //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
+            logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
-        ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
-        return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+            ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
+            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+
+
 
     }
 
