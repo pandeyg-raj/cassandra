@@ -266,9 +266,12 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         if(!IsEcDeccodeNeeded)
         {
             // just combine and return
+            logger.info("Read Returning: All data shartd available ");
             String encoded_value = "";
             for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+
                 encoded_value = encoded_value + ecResponses[i].getEcCode();
+                logger.info("Combining value:  " + encoded_value);
             }
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value);// should use trim() ?
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
