@@ -613,6 +613,10 @@ public class Keyspace
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
+                                        if(coded_value.length()!= 524288)
+                                        {
+                                            logger.info("Something wrong testing");
+                                        }
                                         //logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                         //logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
