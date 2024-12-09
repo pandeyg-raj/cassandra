@@ -2178,7 +2178,7 @@ public class StorageProxy implements StorageProxyMBean
         // for type of speculation we'll use in this read
         for (int i=0; i<cmdCount; i++)
         {
-            logger.info("Raj storage proxy incoming new Read for keyspace: "+ commands.get(i).metadata().keyspace);
+            //logger.info("Raj storage proxy incoming new Read for keyspace: "+ commands.get(i).metadata().keyspace);
             reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
                                                             consistencyLevel,
                                                             requestTime);

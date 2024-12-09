@@ -557,8 +557,8 @@ public class Keyspace
                         value = ByteBufferUtil.string(cell.buffer());
                         if (value.equals("signal"))
                         {
-                            Tracing.trace("EC Signal received at Storage layer");
-                            logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
+                            //Tracing.trace("EC Signal received at Storage layer");
+                            //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -598,7 +598,7 @@ public class Keyspace
                                         // here updated value should be Erasure code part based on server
 
                                         //String coded_value = local_value.substring(0,local_value.length()/2);
-                                        logger.info("writin coded value at index " + codeIndex);
+                                        //logger.info("writin coded value at index " + codeIndex);
                                         //logger.info("writin coded value " + coded_value + "original " + local_value);
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
@@ -613,7 +613,12 @@ public class Keyspace
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
-                                        logger.info("Raj  Storage Proxy , ECoded value written. original value:" + local_value);
+                                        if(coded_value.length()!= 524288)
+                                        {
+                                            logger.info("Something wrong testing");
+                                        }
+                                        //logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
+                                        //logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
                                     }
                                 }

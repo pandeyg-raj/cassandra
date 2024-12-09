@@ -433,7 +433,7 @@ public abstract class AbstractReadExecutor
         // combine and set the final value
         if(digestResolver.isMyRead())
         {
-            logger.info("RAJ Its My read");
+            //logger.info("RAJ Its My read");
             setResult(digestResolver.myCombineResponse());
             return;
         }
