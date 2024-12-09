@@ -271,7 +271,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
                 encoded_value = encoded_value + ecResponses[i].getEcCode();
-                //logger.info("Combining value:  " + encoded_value);
+                logger.info("Combining value:  " + encoded_value);
             }
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());

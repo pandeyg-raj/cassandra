@@ -604,21 +604,13 @@ public class Keyspace
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
 
-                                        // incresing timestamp 1 sec to force update the ecoded value
-                                        // for same timestamp, cassandra uses lexical order which can prevent ecoded value to update whole value
-
-                                        current_timestamp+=1; // force update new value
-
                                         mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", coded_value);
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
-                                        if(coded_value.length()!= 524288)
-                                        {
-                                            logger.info("Something wrong testing");
-                                        }
-                                        //logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
-                                        //logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
+
+                                        logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
+                                        logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
                                     }
                                 }
