@@ -17,9 +17,12 @@
  */
 package org.apache.cassandra.service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1192,7 +1195,21 @@ public class StorageProxy implements StorageProxyMBean
                                     Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                     long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                                     TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
-                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", "signal");
+
+                                    // can be a map of <string,int>
+
+                                    Map<String, Integer> hm = new HashMap<String, Integer>();
+                                    hm.put("signal", -1);
+                                    hm.put("n", 2);
+                                    hm.put("k", 2);
+                                    hm.put("10.0.0.13", 1);
+                                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                    ObjectOutputStream oos = new ObjectOutputStream(baos);
+                                    oos.writeObject(hm);
+                                    oos.close();
+                                    String EcSignal = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", EcSignal);
                                     Mutation signalMutation = mutationBuilder.build();
                                     List<Mutation>  signalMutations = new ArrayList<>();
                                     signalMutations.add(signalMutation);

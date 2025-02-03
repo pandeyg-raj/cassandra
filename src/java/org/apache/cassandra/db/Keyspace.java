@@ -17,14 +17,18 @@
  */
 package org.apache.cassandra.db;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -85,6 +89,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.partitions.PartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
+import org.apache.cassandra.utils.JsonUtils;
 
 //raj debug end
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -552,10 +557,26 @@ public class Keyspace
                 //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
                 if (cell.column().name.toString().equals("data"))
                 {
+                    Tracing.trace("receive request for data");
+
+                    Map<String, Integer> signalMap;
                     try
                     {
                         value = ByteBufferUtil.string(cell.buffer());
-                        if (value.equals("signal"))
+                        try {
+                            byte[] tmpdata = Base64.getDecoder().decode(value);
+                            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(tmpdata));
+                            signalMap = (Map<String, Integer>) ois.readObject();
+                            ois.close();
+                        }
+                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                            break;
+                            //throw new RuntimeException(e);
+                        }
+
+                        if (signalMap.get("signal") == -1)
                         {
                             //Tracing.trace("EC Signal received at Storage layer");
                             //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
@@ -592,7 +613,7 @@ public class Keyspace
                                         String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
 
                                         // find code index corresponding to ip
-                                        int codeIndex = ECConfig.getAddressMap().get(myLocalIP);
+                                        int codeIndex = signalMap.get(myLocalIP);
                                         String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
