@@ -191,11 +191,11 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
         }
 
-        ECResponse[] ecResponses = new ECResponse[snapshot.size()];
+        ECResponse[] ecResponses = new ECResponse[ECConfig.TOTAL_SHARDS];//new ECResponse[snapshot.size()];
         int TmpIndex = 0;
         for (Message<ReadResponse> message : snapshot)
         {
-            String messageSender = message.from().getHostAddress(false);
+            //String messageSender = message.from().getHostAddress(false);
             //int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
             ecResponses[TmpIndex] = new ECResponse();
             //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
@@ -232,10 +232,13 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
                         String value = ByteBufferUtil.string(Finalbuffer);
-                        ecResponses[TmpIndex].setEcCode(value);
-                        ecResponses[TmpIndex].setCodeTimestamp(c.timestamp());
-                        ecResponses[TmpIndex].setCodeAvailable(true);
-                        ecResponses[TmpIndex].setCodeLength(value.length());
+                        ecResponses[codeIndex].setIsEcCoded(isEc);
+                        ecResponses[codeIndex].setEcCode(value);
+                        ecResponses[codeIndex].setCodeTimestamp(c.timestamp());
+                        ecResponses[codeIndex].setCodeAvailable(true);
+                        ecResponses[codeIndex].setCodeLength(value.length());
+                        ecResponses[codeIndex].setEcCodeIndex(codeIndex);
+
                     }
                     catch (Exception e)
                     {
@@ -255,19 +258,15 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
 
         // check if all "DATA" codes available
-        boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
-        for (ECResponse ecResponse : ecResponses)
-        {
-            isCodeavailable[ecResponse.getEcCodeIndex()] = ecResponse.isCodeAvailable();
-        }
-
         boolean IsEcDeccodeNeeded = false;
-        for(int i=0;i<ECConfig.DATA_SHARDS;i++)
+
+        for (int i=0;i<ECConfig.DATA_SHARDS;i++)
         {
-            if(!isCodeavailable[i])
+            if(!ecResponses[i].getIsCodeAvailable())
             {
                 IsEcDeccodeNeeded = true;
             }
+
         }
 
         int ShardSize = ecResponses[0].getCodeLength();
@@ -285,6 +284,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
         }
 
+        assert true == false;
 
 
         // decode and combine values
@@ -293,7 +293,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         for (int i = 0; i < ecResponses.length; i++) {
 
-            if(ecResponses[i].isCodeAvailable())  // code available, set corresponding index
+            if(ecResponses[i].getIsCodeAvailable())  // code available, set corresponding index
             {
                 String value = ecResponses[i].getEcCode();
                 decodeMatrix[ecResponses[i].getEcCodeIndex()] = value.getBytes(StandardCharsets.UTF_8);
@@ -305,18 +305,19 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
         // for the rewponses code not available aallocate empty space
 
-        for( int i=0;i<isCodeavailable.length;i++)
+        //for( int i=0;i<isCodeavailable.length;i++)
         {
-            if (!isCodeavailable[i])
+           // if (!isCodeavailable[i])
             {
-                decodeMatrix[i] = new byte[ShardSize];
+               // decodeMatrix[i] = new byte[ShardSize];
             }
         }
 
 
-        try
+        //try
         {
-            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize,1,1 );
+            //String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize,1,1 );
+            String encoded_value = "testValue";
             // encoded_value = codelist.get(0) + codelist.get(1) ;
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
             logger.info("Read Returning: encoded main computer value is "+ encoded_value);
@@ -324,10 +325,10 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
         }
-        catch (IOException e)
-        {
-            throw new RuntimeException(e);
-        }
+        //catch (IOException e)
+        //{
+           // throw new RuntimeException(e);
+       // }
 
 
 

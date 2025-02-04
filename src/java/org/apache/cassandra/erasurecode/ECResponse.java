@@ -26,6 +26,18 @@ public class ECResponse
     private long codeTimestamp;
     private int ecCodeIndex;
 
+    public int getIsEcCoded()
+    {
+        return IsEcCoded;
+    }
+
+    public void setIsEcCoded(int isEcCoded)
+    {
+        IsEcCoded = isEcCoded;
+    }
+
+    private int IsEcCoded;
+
     public int getEcCodeIndex()
     {
         return ecCodeIndex;
@@ -46,7 +58,7 @@ public class ECResponse
         this.ecCode = ecCode;
     }
 
-    public boolean isCodeAvailable()
+    public boolean getIsCodeAvailable()
     {
         return IsCodeAvailable;
     }
