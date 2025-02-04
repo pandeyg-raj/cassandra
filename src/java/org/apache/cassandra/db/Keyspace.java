@@ -559,19 +559,18 @@ public class Keyspace
                 {
                     Tracing.trace("receive request for data");
 
-                    Map<String, Integer> signalMap;
                     try
                     {
                         String Messagevalue = ByteBufferUtil.string(cell.buffer());
 
                         if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
                         {
+                            logger.info("ECsig  write " + ECConfig.ecSignal++ );
                             //Tracing.trace("EC Signal received at Storage layer");
                             //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
-
                             SinglePartitionReadCommand localRead =
                             SinglePartitionReadCommand.fullPartitionRead(tableMetadata,
                             FBUtilities.nowInSeconds(),
@@ -632,6 +631,10 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
+                                        if(Finalbuffer.position()!=0)
+                                        {
+                                            logger.info("Porblem value found");
+                                        }
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
 
@@ -655,6 +658,12 @@ public class Keyspace
                             }
 
                             Tracing.trace("local reading for EC Storage layer");
+
+                        }
+                        else
+                        {
+                            logger.info("Normal write " + ECConfig.normalWrite++ );
+
 
                         }
 
