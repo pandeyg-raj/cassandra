@@ -565,7 +565,7 @@ public class Keyspace
 
                         if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
                         {
-                            logger.info("ECsig  write " + ECConfig.ecSignal++ );
+                            logger.info("ECsig  write key" + mutation.key() + "count" + ECConfig.ecSignal++  );
                             //Tracing.trace("EC Signal received at Storage layer");
                             //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
 
@@ -662,9 +662,8 @@ public class Keyspace
                         }
                         else
                         {
-                            logger.info("Normal write " + ECConfig.normalWrite++ );
-
-
+                            logger.info("Normal write key" + mutation.key() + "count"  + ECConfig.normalWrite++ );
+                            
                         }
 
                     }
