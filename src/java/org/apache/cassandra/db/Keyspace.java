@@ -562,21 +562,9 @@ public class Keyspace
                     Map<String, Integer> signalMap;
                     try
                     {
-                        value = ByteBufferUtil.string(cell.buffer());
-                        try {
-                            byte[] tmpdata = Base64.getDecoder().decode(value);
-                            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(tmpdata));
-                            signalMap = (Map<String, Integer>) ois.readObject();
-                            ois.close();
-                        }
-                        catch (Exception e)
-                        {
-                            e.printStackTrace();
-                            break;
-                            //throw new RuntimeException(e);
-                        }
+                        String Messagevalue = ByteBufferUtil.string(cell.buffer());
 
-                        if (signalMap.get("signal") == -1)
+                        if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
                         {
                             //Tracing.trace("EC Signal received at Storage layer");
                             //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
@@ -608,9 +596,22 @@ public class Keyspace
 
                                         // get the code index from ip address
                                         String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
-                                        int codeIndex = signalMap.get(myLocalIP);
-                                        int n = signalMap.get("n");
-                                        int k = signalMap.get("k");
+
+                                        String[] SigTocken = Messagevalue.split(",");
+                                        //SigTocken[0] is = "signal"
+                                        int n = Integer.parseInt(SigTocken[1]);
+                                        int k = Integer.parseInt(SigTocken[2]);
+                                        int TotalServer = Integer.parseInt(SigTocken[3]);
+                                        int codeIndex = -1;
+
+                                        for(int i= 0;i<TotalServer;i++)
+                                        {
+                                            if( myLocalIP.equals(SigTocken[4+i].substring(0,SigTocken[4+i].indexOf(":"))))
+                                            {
+                                                codeIndex = Integer.parseInt( SigTocken[4+i].substring(SigTocken[4+i].indexOf(":") +1 , SigTocken[4+i].length()));
+                                            }
+                                        }
+
                                         int isEC = 1;
                                         // finish encode data
                                         byte [][]encodeMatrix = new ErasureCode().MyEncode(local_value,n,k);

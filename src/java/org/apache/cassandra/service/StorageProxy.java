@@ -1199,19 +1199,18 @@ public class StorageProxy implements StorageProxyMBean
 
                                     // EC_Service call here
 
-                                    Map<String, Integer> hm = new HashMap<String, Integer>();
-                                    hm.put("signal", -1);
-                                    hm.put("n", ECConfig.TOTAL_SHARDS);
-                                    hm.put("k", ECConfig.DATA_SHARDS);
-                                    hm.put("10.0.0.20", 0);
-                                    hm.put("10.0.0.13", 1);
-                                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                                    ObjectOutputStream oos = new ObjectOutputStream(baos);
-                                    oos.writeObject(hm);
-                                    oos.close();
-                                    String EcSignal = Base64.getEncoder().encodeToString(baos.toByteArray());
 
-                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", EcSignal);
+                                    String SignalStr = "signal," +
+                                                       String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
+                                                       String.valueOf(ECConfig.DATA_SHARDS) +"," +
+                                                        "2,10.0.0.20:0,10.0.0.13:1";
+
+
+                                    ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
+                                   // Finalbuffer.flip();
+
+
+                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", Finalbuffer);
                                     Mutation signalMutation = mutationBuilder.build();
                                     List<Mutation>  signalMutations = new ArrayList<>();
                                     signalMutations.add(signalMutation);
