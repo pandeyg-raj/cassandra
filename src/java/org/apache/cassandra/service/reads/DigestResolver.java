@@ -132,6 +132,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         // Use a builder to collect the modified partitions
         ReadResponse resp = null;
 
+
         while (partitions.hasNext()) {
             try (RowIterator rows = partitions.next()) {
                 TableMetadata tableMetadata  = rows.metadata();
@@ -183,6 +184,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
     public PartitionIterator myCombineResponse()
     {
+        // array to keep track which code part is available
+        boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
+
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
 
@@ -238,6 +242,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         ecResponses[codeIndex].setCodeAvailable(true);
                         ecResponses[codeIndex].setCodeLength(value.length());
                         ecResponses[codeIndex].setEcCodeIndex(codeIndex);
+                        isCodeavailable[codeIndex] = true;
 
                     }
                     catch (Exception e)
@@ -262,14 +267,14 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         for (int i=0;i<ECConfig.DATA_SHARDS;i++)
         {
-            if(!ecResponses[i].getIsCodeAvailable())
+            if(!isCodeavailable[i])
             {
                 IsEcDeccodeNeeded = true;
             }
 
         }
 
-        int ShardSize = ecResponses[0].getCodeLength();
+
         if(!IsEcDeccodeNeeded)
         {
             // just combine and return
@@ -285,7 +290,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
 
         assert true == false;
-
+        int ShardSize = ecResponses[0].getCodeLength();
 
         // decode and combine values
 

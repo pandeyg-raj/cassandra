@@ -1203,7 +1203,8 @@ public class StorageProxy implements StorageProxyMBean
                                     hm.put("signal", -1);
                                     hm.put("n", ECConfig.TOTAL_SHARDS);
                                     hm.put("k", ECConfig.DATA_SHARDS);
-                                    hm.put("10.0.0.13", 0);
+                                    hm.put("10.0.0.20", 0);
+                                    hm.put("10.0.0.13", 1);
                                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                                     ObjectOutputStream oos = new ObjectOutputStream(baos);
                                     oos.writeObject(hm);
