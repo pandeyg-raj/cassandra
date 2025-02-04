@@ -80,7 +80,7 @@ import org.apache.cassandra.utils.concurrent.OpOrder;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 import org.apache.cassandra.utils.concurrent.Promise;
 
-// raj debug start
+// raj debug start import
 
 import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.erasurecode.ECConfig;
@@ -647,8 +647,8 @@ public class Keyspace
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
 
-                                        logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
-                                        logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
+                                        //logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
+                                        //logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
                                     }
                                 }

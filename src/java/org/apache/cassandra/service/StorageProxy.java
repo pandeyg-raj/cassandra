@@ -1203,7 +1203,7 @@ public class StorageProxy implements StorageProxyMBean
                                     String SignalStr = "signal," +
                                                        String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
                                                        String.valueOf(ECConfig.DATA_SHARDS) +"," +
-                                                        "2,10.0.0.20:0,10.0.0.13:1";
+                                                        "2,10.0.0.20:0,10.0.0.38:1";
 
 
                                     ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
