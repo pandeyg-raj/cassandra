@@ -1207,6 +1207,11 @@ public class StorageProxy implements StorageProxyMBean
 
 
                                     ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
+
+                                    if(Finalbuffer.position()!=0)
+                                    {
+                                        logger.info("Porblem value Storage proxy found");
+                                    }
                                    // Finalbuffer.flip();
 
 
