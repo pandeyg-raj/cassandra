@@ -83,6 +83,7 @@ import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewUtils;
 import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.CasWriteTimeoutException;
 import org.apache.cassandra.exceptions.CasWriteUnknownResultException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -1196,13 +1197,13 @@ public class StorageProxy implements StorageProxyMBean
                                     long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                                     TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
 
-                                    // can be a map of <string,int>
+                                    // EC_Service call here
 
                                     Map<String, Integer> hm = new HashMap<String, Integer>();
                                     hm.put("signal", -1);
-                                    hm.put("n", 2);
-                                    hm.put("k", 2);
-                                    hm.put("10.0.0.13", 1);
+                                    hm.put("n", ECConfig.TOTAL_SHARDS);
+                                    hm.put("k", ECConfig.DATA_SHARDS);
+                                    hm.put("10.0.0.13", 0);
                                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                                     ObjectOutputStream oos = new ObjectOutputStream(baos);
                                     oos.writeObject(hm);
@@ -1216,8 +1217,6 @@ public class StorageProxy implements StorageProxyMBean
                                     Tracing.trace("Write sending EC signal outside");
                                     mutate(signalMutations, consistencyLevel, requestTime);
                                     Tracing.trace("Write  EC signal finished outside");
-
-
                                 }
                                 catch (Exception e)    //catch (CharacterCodingException e)
                                 {

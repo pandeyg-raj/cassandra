@@ -185,6 +185,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
     {
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
+
         if( snapshot.size() < ECConfig.DATA_SHARDS )
         {
             Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
@@ -195,9 +196,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         for (Message<ReadResponse> message : snapshot)
         {
             String messageSender = message.from().getHostAddress(false);
-            int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
+            //int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
             ecResponses[TmpIndex] = new ECResponse();
-            ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
+            //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
             ReadResponse response = message.payload;
             tmp = message.payload;
 
@@ -223,7 +224,14 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     try
                     {
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
-                        String value = ByteBufferUtil.string(c.buffer());
+                        ByteBuffer Finalbuffer = c.buffer();
+
+                        int isEc = Finalbuffer.getInt();
+                        int n = Finalbuffer.getInt();
+                        int k = Finalbuffer.getInt();
+                        int codeIndex = Finalbuffer.getInt();
+                        int coded_valueLength = Finalbuffer.getInt();
+                        String value = ByteBufferUtil.string(Finalbuffer);
                         ecResponses[TmpIndex].setEcCode(value);
                         ecResponses[TmpIndex].setCodeTimestamp(c.timestamp());
                         ecResponses[TmpIndex].setCodeAvailable(true);
@@ -308,7 +316,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         try
         {
-            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize);
+            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize,1,1 );
             // encoded_value = codelist.get(0) + codelist.get(1) ;
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
             logger.info("Read Returning: encoded main computer value is "+ encoded_value);

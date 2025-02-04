@@ -31,13 +31,14 @@ import org.slf4j.LoggerFactory;
 public class ErasureCode
 {
 
-    public static final int DATA_SHARDS = ECConfig.DATA_SHARDS;
-    public static final int PARITY_SHARDS = ECConfig.PARITY_SHARDS ;
-    public static final int TOTAL_SHARDS = ECConfig.TOTAL_SHARDS ;
+    //public static final int DATA_SHARDS = ECConfig.DATA_SHARDS;
+   // public static final int PARITY_SHARDS = ECConfig.PARITY_SHARDS ;
+   // public static final int TOTAL_SHARDS = ECConfig.TOTAL_SHARDS ;
     private static final Logger logger = LoggerFactory.getLogger(ErasureCode.class);
 
-    public  byte [] []  MyEncode (String inputFile) throws IOException
+    public  byte [] []  MyEncode (String inputFile,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
+        int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
         // Get the size of the input file.  (Files bigger that  Integer.MAX_VALUE will fail here!)
 
         final int fileSize = (int) inputFile.length();
@@ -85,17 +86,17 @@ public class ErasureCode
         //     System.out.println("before encode" + new String( shards[i], StandardCharsets.UTF_8));
         //}
         // Use Reed-Solomon to calculate the parity.
+
         ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
         reedSolomon.encodeParity(shards, 0, shardSize);
 
         return shards;
     }
 
-    public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize ) throws IOException
+    public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
-
+        int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
         ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
-
 
         reedSolomon.decodeMissing(shards, shardPresent, 0, shardSize);
 

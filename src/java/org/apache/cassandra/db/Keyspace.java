@@ -20,6 +20,7 @@ package org.apache.cassandra.db;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -89,7 +90,6 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.partitions.PartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
-import org.apache.cassandra.utils.JsonUtils;
 
 //raj debug end
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -605,16 +605,32 @@ public class Keyspace
                                         Cell c = r.getCell(colMeta);
 
                                         String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
-                                        // finish encode data
-                                        byte [][]encodeMatrix = new ErasureCode().MyEncode(local_value);
-                                        //Tracing.trace("ECing value {} Storage layer",local_value);
 
                                         // get the code index from ip address
                                         String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
+                                        int codeIndex = signalMap.get(myLocalIP);
+                                        int n = signalMap.get("n");
+                                        int k = signalMap.get("k");
+                                        int isEC = 1;
+                                        // finish encode data
+                                        byte [][]encodeMatrix = new ErasureCode().MyEncode(local_value,n,k);
+
+                                        //Tracing.trace("ECing value {} Storage layer",local_value);
 
                                         // find code index corresponding to ip
-                                        int codeIndex = signalMap.get(myLocalIP);
+
                                         String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
+                                        int coded_valueLength = encodeMatrix[codeIndex].length;
+
+                                        ByteBuffer Finalbuffer = ByteBuffer.allocate((5*4) + coded_valueLength);
+                                        Finalbuffer.putInt(isEC);
+                                        Finalbuffer.putInt(n);
+                                        Finalbuffer.putInt(k);
+                                        Finalbuffer.putInt(codeIndex);
+                                        Finalbuffer.putInt(coded_valueLength);
+                                        Finalbuffer.put(encodeMatrix[codeIndex]);
+                                        Finalbuffer.flip();
+
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
 
@@ -625,7 +641,7 @@ public class Keyspace
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
 
-                                        mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", coded_value);
+                                        mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", Finalbuffer);
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
