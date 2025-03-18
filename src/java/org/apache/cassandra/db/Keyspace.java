@@ -80,7 +80,7 @@ import org.apache.cassandra.utils.concurrent.OpOrder;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 import org.apache.cassandra.utils.concurrent.Promise;
 
-// raj debug start
+// raj debug header start
 
 import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.erasurecode.ECConfig;
@@ -610,6 +610,10 @@ public class Keyspace
                                             {
                                                 codeIndex = Integer.parseInt( SigTocken[4+i].substring(SigTocken[4+i].indexOf(":") +1 , SigTocken[4+i].length()));
                                             }
+                                        }
+                                        if(codeIndex ==-1)
+                                        {
+                                            assert true == false;
                                         }
 
                                         int isEC = 1;

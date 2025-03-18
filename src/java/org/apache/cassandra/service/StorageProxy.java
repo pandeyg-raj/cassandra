@@ -153,7 +153,7 @@ import org.apache.cassandra.utils.TimeUUID;
 import org.apache.cassandra.utils.concurrent.CountDownLatch;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 
-// raj debug start
+// raj debug header start
 
 import org.apache.cassandra.db.rows.Cell;
 import org.apache.cassandra.db.rows.Row;
@@ -1203,7 +1203,7 @@ public class StorageProxy implements StorageProxyMBean
                                     String SignalStr = "signal," +
                                                        String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
                                                        String.valueOf(ECConfig.DATA_SHARDS) +"," +
-                                                        "2,10.0.0.20:0,10.0.0.13:1";
+                                                        "5,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4";
 
 
                                     ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);

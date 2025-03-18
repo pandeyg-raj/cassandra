@@ -18,14 +18,13 @@
 
 package org.apache.cassandra.erasurecode;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.HashMap;
 
 public class ECConfig
 {
-    public final static int DATA_SHARDS = 2;
-    public final static int PARITY_SHARDS = 0;
-    public final static int TOTAL_SHARDS = 2;
+    public final static int DATA_SHARDS = 3;
+    public final static int PARITY_SHARDS = 2;
+    public final static int TOTAL_SHARDS = 5;
     //public final static int num_intersect = 1;
 
     public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.186","10.0.0.106","10.0.0.15"};
