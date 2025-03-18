@@ -27,6 +27,8 @@ public class ECConfig
     public final static int TOTAL_SHARDS = 5;
     //public final static int num_intersect = 1;
 
+    public  static int wholeValueFound = 0;
+
     public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.186","10.0.0.106","10.0.0.15"};
 
     private static HashMap<String, Integer> map = new HashMap<>();

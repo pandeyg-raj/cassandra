@@ -186,7 +186,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
     {
         // array to keep track which code part is available
         boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
-
+        boolean IswholeValue = false;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
 
@@ -231,9 +231,17 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         ByteBuffer Finalbuffer = c.buffer();
 
                         int isEc = Finalbuffer.getInt();
+                        if( isEc !=1)
+                        {
+                            logger.info("Whole value found count" + ECConfig.wholeValueFound++);
+                            Finalbuffer.position(0);
+                            ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+                        }
                         int n = Finalbuffer.getInt();
                         int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
+
                         int coded_valueLength = Finalbuffer.getInt();
                         String value = ByteBufferUtil.string(Finalbuffer);
                         ecResponses[codeIndex].setIsEcCoded(isEc);
@@ -283,7 +291,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
                 encoded_value = encoded_value + ecResponses[i].getEcCode();
-                logger.info("Combining value:  " + encoded_value);
+                //logger.info("Combining value:  " + encoded_value);
             }
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
