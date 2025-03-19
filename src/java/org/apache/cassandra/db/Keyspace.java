@@ -644,8 +644,8 @@ public class Keyspace
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
 
-                                        logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
-                                        logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
+                                       // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
+                                       // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
                                     }
                                 }
