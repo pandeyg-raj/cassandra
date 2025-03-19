@@ -557,7 +557,7 @@ public class Keyspace
                 //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
                 if (cell.column().name.toString().equals("data"))
                 {
-                    Tracing.trace("receive request for data");
+                    //Tracing.trace("receive request for data");
 
                     Map<String, Integer> signalMap;
                     try

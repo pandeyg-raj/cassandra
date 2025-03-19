@@ -1170,9 +1170,9 @@ public class StorageProxy implements StorageProxyMBean
                 mutateAtomically((Collection<Mutation>) mutations, consistencyLevel, updatesView, requestTime);
             else
             {
-                Tracing.trace("Write starting outside");
+                //Tracing.trace("Write starting outside");
                 mutate(mutations, consistencyLevel, requestTime);
-                Tracing.trace("Write finished outside");
+                //Tracing.trace("Write finished outside");
 
 
                 // Raj debug start

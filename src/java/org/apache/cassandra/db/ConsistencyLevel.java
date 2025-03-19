@@ -20,7 +20,11 @@ package org.apache.cassandra.db;
 
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.carrotsearch.hppc.ObjectIntHashMap;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.InOurDc;
 import org.apache.cassandra.schema.TableMetadata;
@@ -47,6 +51,7 @@ public enum ConsistencyLevel
     LOCAL_ONE   (10, true),
     NODE_LOCAL  (11, true);
 
+    private static final Logger logger = LoggerFactory.getLogger(ConsistencyLevel.class);
     // Used by the binary protocol
     public final int code;
     private final boolean isDCLocal;
@@ -90,7 +95,13 @@ public enum ConsistencyLevel
 
     public static int quorumFor(AbstractReplicationStrategy replicationStrategy)
     {
-        return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        //rajj debug start
+
+        // return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        logger.info("quorum resolved to :  " + ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS/2));
+        return (ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS/2));
+
+        //rajj debug end
     }
 
     public static int localQuorumFor(AbstractReplicationStrategy replicationStrategy, String dc)
