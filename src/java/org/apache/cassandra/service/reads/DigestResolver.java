@@ -17,7 +17,6 @@
  */
 package org.apache.cassandra.service.reads;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -36,28 +35,23 @@ import org.apache.cassandra.db.partitions.PartitionUpdate;
 import org.apache.cassandra.db.partitions.SingletonUnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
 import org.apache.cassandra.db.rows.BTreeRow;
+import org.apache.cassandra.db.rows.Cell;
 import org.apache.cassandra.db.rows.Row;
+import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.rows.UnfilteredRowIterator;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ECResponse;
-import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.locator.Endpoints;
-import org.apache.cassandra.locator.Replica;
 import org.apache.cassandra.locator.InetAddressAndPort;
+import org.apache.cassandra.locator.Replica;
 import org.apache.cassandra.locator.ReplicaPlan;
 import org.apache.cassandra.net.Message;
+import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.reads.repair.NoopReadRepair;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
 import org.apache.cassandra.utils.ByteBufferUtil;
-
-// raj debug header start
-import org.apache.cassandra.db.rows.Cell;
-import org.apache.cassandra.erasurecode.ECConfig;
-import org.apache.cassandra.db.rows.RowIterator;
-import org.apache.cassandra.schema.ColumnMetadata;
-
-//raj debug end
 
 import static com.google.common.collect.Iterables.any;
 import static org.apache.cassandra.utils.Clock.Global.nanoTime;
@@ -182,7 +176,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         return isMyRead;
     }
 
-    public PartitionIterator myCombineResponse()
+        public PartitionIterator myCombineResponse()
     {
         // array to keep track which code part is available
         boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
