@@ -1,4 +1,4 @@
-/*
+    /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,15 +17,16 @@
  */
 
 package org.apache.cassandra.erasurecode;
-import com.backblaze.erasure.ReedSolomon;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+    import java.io.ByteArrayInputStream;
+    import java.io.IOException;
+    import java.io.InputStream;
+    import java.nio.charset.StandardCharsets;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+    import org.slf4j.Logger;
+    import org.slf4j.LoggerFactory;
+
+    import com.backblaze.erasure.ReedSolomon;
 
 
 public class ErasureCode
@@ -103,13 +104,13 @@ public class ErasureCode
 
         byte [] NewallBytes = new byte [shardSize * DATA_SHARDS];
 
-        long startTime = System.nanoTime();
+        //long startTime = System.nanoTime();
 
         for (int i = 0; i < DATA_SHARDS; i++) {
             System.arraycopy(shards[i], 0, NewallBytes, shardSize * i, shardSize);
         }
-        long stopTime = System.nanoTime();
-        System.out.println((stopTime - startTime)/1000);
+        //long stopTime = System.nanoTime();
+        //System.out.println((stopTime - startTime)/1000);
 
         //return NewallBytes;
          return new String( NewallBytes, StandardCharsets.UTF_8).trim();
