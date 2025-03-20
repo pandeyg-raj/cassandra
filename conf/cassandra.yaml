@@ -59,7 +59,7 @@ num_tokens: 16
 
 # Replica factor is explicitly set, regardless of keyspace or datacenter.
 # This is the replica factor within the datacenter, like NTS.
-allocate_tokens_for_local_replication_factor: 3
+allocate_tokens_for_local_replication_factor: 5
 
 # initial_token allows you to specify tokens manually.  While you can use it with
 # vnodes (num_tokens > 1, above) -- in which case you should provide a
@@ -664,7 +664,7 @@ seed_provider:
     parameters:
       # seeds is actually a comma-delimited list of addresses.
       # Ex: "<ip1>,<ip2>,<ip3>"
-      - seeds: "10.158.34.18:7000"
+      - seeds: "10.158.34.18,10.158.34.23,10.158.34.24"
       # If set to "true", SimpleSeedProvider will return all IP addresses for a DNS name,
       # based on the configured name service on the system. Defaults to "false".
       #  resolve_multiple_ip_addresses_per_dns_record: "false"
