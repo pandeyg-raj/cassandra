@@ -611,6 +611,8 @@ public class Keyspace
                                         {
                                             assert true == false;
                                         }
+                                        logger.error("3 Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + " thread "+ Thread.currentThread().getId());
+
 
                                         int isEC = 1;
                                         // finish encode data
@@ -632,7 +634,7 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
-                                        logger.error("3 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex+ " value " +coded_value + "thread "+ Thread.currentThread().getId());
+                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex+ " value " +coded_value + "thread "+ Thread.currentThread().getId());
 
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
@@ -648,7 +650,7 @@ public class Keyspace
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
-                                        logger.error("4 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
+                                        logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
                                        // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                        // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
@@ -656,7 +658,7 @@ public class Keyspace
                                 }
                             }
 
-                            Tracing.trace("local reading for EC Storage layer");
+                            //Tracing.trace("local reading for EC Storage layer");
 
                         }
 
