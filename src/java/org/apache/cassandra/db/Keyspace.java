@@ -634,7 +634,7 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
-                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex+ " value " +coded_value + "thread "+ Thread.currentThread().getId());
+                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "thread "+ Thread.currentThread().getId());
 
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
