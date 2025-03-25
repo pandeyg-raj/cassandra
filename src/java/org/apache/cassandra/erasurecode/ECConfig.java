@@ -22,9 +22,9 @@ import java.util.HashMap;
 
 public class ECConfig
 {
-    public final static int DATA_SHARDS = 2;
-    public final static int PARITY_SHARDS = 1;
-    public final static int TOTAL_SHARDS = 3;
+    public final static int DATA_SHARDS = 3;
+    public final static int PARITY_SHARDS = 2;
+    public final static int TOTAL_SHARDS = 5;
     //public final static int num_intersect = 1;
 
     public  static int wholeValueFound = 0;
