@@ -1192,7 +1192,8 @@ public class StorageProxy implements StorageProxyMBean
                                     String SignalStr = "signal," +
                                                        String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
                                                        String.valueOf(ECConfig.DATA_SHARDS) +"," +
-                                                        "3,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+                                                        "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+                                                        
 
 
                                     ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
