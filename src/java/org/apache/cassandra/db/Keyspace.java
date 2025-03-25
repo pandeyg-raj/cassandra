@@ -540,6 +540,8 @@ public class Keyspace
                                                Promise<?> future)
     {
 
+
+        logger.error( "1 Mutation received at storage node");
         // Raj debug start signal received here
         String value = "";
         Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
@@ -559,8 +561,9 @@ public class Keyspace
 
                         if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
                         {
+                            ECConfig.TotalSignalReceived++;
                             //Tracing.trace("EC Signal received at Storage layer");
-                            //logger.info("EC Signal received at Storage layer for column: " + cell.column().name.toString());
+                            logger.error("2 Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -629,6 +632,8 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
+                                        logger.error("3 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex+ " value " +coded_value);
+
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
 
@@ -643,7 +648,7 @@ public class Keyspace
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
-
+                                        logger.error("4 Storage layer , signal mutation applied" );
                                        // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                        // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
