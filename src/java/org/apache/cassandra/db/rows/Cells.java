@@ -83,7 +83,7 @@ public abstract class Cells
         if (leftTimestamp != rightTimestamp)
             return leftTimestamp > rightTimestamp ? left : right;
 
-        // raj debug start
+        // raj debug start logic for comparison
         if(leftTimestamp == rightTimestamp)
         {
             // id column name is data blindly have latest (right?) update

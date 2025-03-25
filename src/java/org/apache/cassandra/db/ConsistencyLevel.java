@@ -97,9 +97,10 @@ public enum ConsistencyLevel
     {
         //rajj debug start
 
-        // return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
-        int quorum = ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS/2);
-        logger.info("quorum resolved to :  "+quorum);
+         // return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        int quorum = (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        //int quorum = ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS/2);
+        //logger.info("quorum resolved to :  "+quorum);
         return (quorum);
 
         //rajj debug end

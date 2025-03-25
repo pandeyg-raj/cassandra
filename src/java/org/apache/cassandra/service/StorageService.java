@@ -1049,7 +1049,7 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
 
         completeInitialization();
 
-        //raj debug start
+        //raj debug start initialisation ec data
         ECConfig.initiateAddressMap();
         //raj debug end
     }
