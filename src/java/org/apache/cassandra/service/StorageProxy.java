@@ -1115,6 +1115,70 @@ public class StorageProxy implements StorageProxyMBean
         }
     }
 
+    public static void sendECSignal(List<? extends IMutation> mutations,
+                                    ConsistencyLevel consistencyLevel,
+                                    Dispatcher.RequestTime requestTime)
+    {
+        // Raj debug start sending signal here after write
+        for (IMutation mutation : mutations)
+        {
+            String value = "";
+            Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
+            if (data != null)
+            {
+                for (Cell cell : data.cells())
+                {
+                    //logger.info("Raj StorageProxy mutation with followinf details already applied ");
+                    //logger.info("Raj StorageProxy key is " + mutation.key().toString());
+                    if (cell.column().name.toString().equals("data"))
+                    {
+                        try
+                        {
+                            value = ByteBufferUtil.string(cell.buffer());
+                            //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
+                            //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
+                            Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
+                            TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+
+                            // EC_Service call here
+
+
+                            String SignalStr = "signal," +
+                                               String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
+                                               String.valueOf(ECConfig.DATA_SHARDS) +"," +
+                                               "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+
+
+
+                            ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
+                            // Finalbuffer.flip();
+
+
+                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", Finalbuffer);
+                            Mutation signalMutation = mutationBuilder.build();
+                            List<Mutation>  signalMutations = new ArrayList<>();
+                            signalMutations.add(signalMutation);
+                            logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
+                            mutate(signalMutations, consistencyLevel, requestTime);
+                            logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
+                        }
+                        catch (Exception e)    //catch (CharacterCodingException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                //logger.info("Null pointer exception");
+            }
+
+        }
+        //Raj debug end
+    }
+
     @SuppressWarnings("unchecked")
     public static void mutateWithTriggers(List<? extends IMutation> mutations,
                                           ConsistencyLevel consistencyLevel,
@@ -1163,65 +1227,18 @@ public class StorageProxy implements StorageProxyMBean
                 mutate(mutations, consistencyLevel, requestTime);
                 logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
+                //sendECSignal(mutations,consistencyLevel, requestTime);
 
-                // Raj debug start sending signal here after write
-                for (IMutation mutation : mutations)
-                {
-                    String value = "";
-                    Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
-                    if (data != null)
-                    {
-                        for (Cell cell : data.cells())
-                        {
-                            //logger.info("Raj StorageProxy mutation with followinf details already applied ");
-                            //logger.info("Raj StorageProxy key is " + mutation.key().toString());
-                            if (cell.column().name.toString().equals("data"))
-                            {
-                                try
-                                {
-                                    value = ByteBufferUtil.string(cell.buffer());
-                                    //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
-                                    //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
-                                    Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
-                                    long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
-                                    TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
-
-                                    // EC_Service call here
-
-
-                                    String SignalStr = "signal," +
-                                                       String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
-                                                       String.valueOf(ECConfig.DATA_SHARDS) +"," +
-                                                        "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
-                                                        
-
-
-                                    ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
-                                   // Finalbuffer.flip();
-
-
-                                    mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", Finalbuffer);
-                                    Mutation signalMutation = mutationBuilder.build();
-                                    List<Mutation>  signalMutations = new ArrayList<>();
-                                    signalMutations.add(signalMutation);
-                                    logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
-                                    mutate(signalMutations, consistencyLevel, requestTime);
-                                    logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
-                                }
-                                catch (Exception e)    //catch (CharacterCodingException e)
-                                {
-                                    e.printStackTrace();
-                                }
-                            }
-                        }
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Function to run in the separate thread
+                        sendECSignal(mutations,consistencyLevel, requestTime);
                     }
-                    else
-                    {
-                        //logger.info("Null pointer exception");
-                    }
+                });
 
-                }
-                //Raj debug end
+                // Start the thread
+                thread.start();
             }
         }
     }
