@@ -540,7 +540,7 @@ public class Keyspace
                                                Promise<?> future)
     {
 
-        // Raj debug start
+        // Raj debug start signal received here
         String value = "";
         Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
         if (data != null)

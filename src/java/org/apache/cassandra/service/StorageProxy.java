@@ -1159,9 +1159,9 @@ public class StorageProxy implements StorageProxyMBean
                 mutateAtomically((Collection<Mutation>) mutations, consistencyLevel, updatesView, requestTime);
             else
             {
-                //Tracing.trace("Write starting outside");
+                logger.error( "1 replicated Write starting outside");
                 mutate(mutations, consistencyLevel, requestTime);
-                //Tracing.trace("Write finished outside");
+                logger.error("2 replicated Write finished outside");
 
 
                 // Raj debug start sending signal here after write
@@ -1203,9 +1203,9 @@ public class StorageProxy implements StorageProxyMBean
                                     Mutation signalMutation = mutationBuilder.build();
                                     List<Mutation>  signalMutations = new ArrayList<>();
                                     signalMutations.add(signalMutation);
-                                    Tracing.trace("Write sending EC signal outside");
+                                    logger.error("3 Write sending EC signal outside");
                                     mutate(signalMutations, consistencyLevel, requestTime);
-                                    Tracing.trace("Write  EC signal finished outside");
+                                    logger.error("4 Write  EC signal finished outside");
                                 }
                                 catch (Exception e)    //catch (CharacterCodingException e)
                                 {
