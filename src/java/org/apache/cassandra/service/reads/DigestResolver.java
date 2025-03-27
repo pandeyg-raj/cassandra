@@ -41,6 +41,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.rows.UnfilteredRowIterator;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ECResponse;
+import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.InetAddressAndPort;
 import org.apache.cassandra.locator.Replica;
@@ -190,12 +191,16 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
 
         ECResponse[] ecResponses = new ECResponse[ECConfig.TOTAL_SHARDS];//new ECResponse[snapshot.size()];
-        int TmpIndex = 0;
+        for(int i=0;i<ECConfig.TOTAL_SHARDS;i++)
+        {
+            ecResponses[i] = new ECResponse();
+        }
+        int ShardSize =-1;
         for (Message<ReadResponse> message : snapshot)
         {
             //String messageSender = message.from().getHostAddress(false);
             //int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
-            ecResponses[TmpIndex] = new ECResponse();
+            
             //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
             ReadResponse response = message.payload;
             tmp = message.payload;
@@ -232,30 +237,44 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
                             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
                         }
+
                         int n = Finalbuffer.getInt();
                         int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
-
                         int coded_valueLength = Finalbuffer.getInt();
-                        String value = ByteBufferUtil.string(Finalbuffer);
+                        ShardSize = coded_valueLength;
+
+                        if(codeIndex < ECConfig.DATA_SHARDS) // data shard
+                        {
+
+                            logger.error("data shard found index #"+codeIndex+ "shardSize"+ShardSize);
+                            String value = ByteBufferUtil.string(Finalbuffer);
+                            ecResponses[codeIndex].setEcCode(value);
+                            //ecResponses[codeIndex].setCodeLength(value.length());
+                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
+
+                        }
+                        else // parity shard
+                        {
+                            logger.error("parity shard found index #"+codeIndex+ "shardSize"+ShardSize);
+                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
+
+
+                        }
+                        ecResponses[codeIndex].setCodeLength(coded_valueLength);
                         ecResponses[codeIndex].setIsEcCoded(isEc);
-                        ecResponses[codeIndex].setEcCode(value);
                         ecResponses[codeIndex].setCodeTimestamp(c.timestamp());
                         ecResponses[codeIndex].setCodeAvailable(true);
-                        ecResponses[codeIndex].setCodeLength(value.length());
                         ecResponses[codeIndex].setEcCodeIndex(codeIndex);
                         isCodeavailable[codeIndex] = true;
-
                     }
                     catch (Exception e)
                     {
                         e.printStackTrace();
                         return null;
                     }
-
                 }
             }
-            TmpIndex++;
         }
 
 
@@ -276,23 +295,32 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         }
 
-
-        if(!IsEcDeccodeNeeded)
+        try
         {
-            // just combine and return
-            //logger.info("Read Returning: All data shartd available ");
-            String encoded_value = "";
-            for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+            if(!IsEcDeccodeNeeded)
+            {
+                // just combine and return
+                //logger.info("Read Returning: All data shartd available ");
+                String encoded_value = "";
+                for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
-                encoded_value = encoded_value + ecResponses[i].getEcCode();
-                //logger.info("Combining value:  " + encoded_value);
+                    encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCodeParity()); //ecResponses[i].getEcCode();
+
+                    //logger.info("Combining value:  " + encoded_value);
+                }
+                logger.info("No decoding needed Combining value:  " + encoded_value);
+                ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
+                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
             }
-            ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
-            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            return null;
         }
 
-        assert true == false;
-        int ShardSize = ecResponses[0].getCodeLength();
+        //assert true == false;
+
 
         // decode and combine values
 
@@ -302,29 +330,20 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
             if(ecResponses[i].getIsCodeAvailable())  // code available, set corresponding index
             {
-                String value = ecResponses[i].getEcCode();
-                decodeMatrix[ecResponses[i].getEcCodeIndex()] = value.getBytes(StandardCharsets.UTF_8);
+                ByteBuffer value = ecResponses[i].getEcCodeParity();
+                value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
+                logger.info("decoding length of index "+ ecResponses[i].getEcCodeIndex() + " is " + decodeMatrix[ecResponses[i].getEcCodeIndex()].length);
             }
-            else // code not available , should not be the case as response should haava a code
+            else // code not available , allocate empty space
             {
-
-            }
-        }
-        // for the rewponses code not available aallocate empty space
-
-        //for( int i=0;i<isCodeavailable.length;i++)
-        {
-           // if (!isCodeavailable[i])
-            {
-               // decodeMatrix[i] = new byte[ShardSize];
+                decodeMatrix[i] = new byte[ShardSize];
             }
         }
 
-
-        //try
+        try
         {
-            //String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize,1,1 );
-            String encoded_value = "testValue";
+            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
+            //String encoded_value = "testValue";
             // encoded_value = codelist.get(0) + codelist.get(1) ;
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
             logger.info("Read Returning: encoded main computer value is "+ encoded_value);
@@ -332,10 +351,10 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
         }
-        //catch (IOException e)
-        //{
-           // throw new RuntimeException(e);
-       // }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
 
 
 

@@ -18,9 +18,28 @@
 
 package org.apache.cassandra.erasurecode;
 
+import java.nio.ByteBuffer;
+
 public class ECResponse
 {
     private String ecCode ; //= new String[ECConfig.TOTAL_SHARDS];
+
+    public ECResponse()
+    {
+        this.IsCodeAvailable = false;
+    }
+
+    public ByteBuffer getEcCodeParity()
+    {
+        return ecCodeParity;
+    }
+
+    public void setEcCodeParity(ByteBuffer ecCodeParity)
+    {
+        this.ecCodeParity = ecCodeParity;
+    }
+
+    private ByteBuffer ecCodeParity;
     private boolean IsCodeAvailable ;   //= new boolean[ECConfig.TOTAL_SHARDS];
     private int codeLength;
     private long codeTimestamp;
