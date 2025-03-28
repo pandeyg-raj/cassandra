@@ -549,6 +549,15 @@ public class Keyspace
         {
             for (Cell cell : data.cells())
             {
+                try{
+                if (cell.column().name.toString().equals("id"))
+                {
+                    logger.error( "Mutation received at storage id" + ByteBufferUtil.string(cell.buffer()));
+                }}
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
                 //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
                 if (cell.column().name.toString().equals("data"))
                 {
