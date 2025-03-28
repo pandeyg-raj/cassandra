@@ -553,7 +553,7 @@ public class Keyspace
                 if (cell.column().name.toString().equals("data"))
                 {
                     //Tracing.trace("receive request for data");
-                    logger.error( "1 Mutation received at storage node for data"+  Thread.currentThread().getId());
+                    logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
                     Map<String, Integer> signalMap;
                     try
                     {

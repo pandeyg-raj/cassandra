@@ -308,7 +308,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
                     //logger.info("Combining value:  " + encoded_value);
                 }
-                logger.info("No decoding needed Combining value:  " + encoded_value);
+                //logger.info("No decoding needed Combining value:  " + encoded_value);
                 ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
             }
@@ -332,7 +332,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             {
                 ByteBuffer value = ecResponses[i].getEcCodeParity();
                 value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
-                logger.info("decoding length of index "+ ecResponses[i].getEcCodeIndex() + " is " + decodeMatrix[ecResponses[i].getEcCodeIndex()].length);
+                //logger.info("decoding length of index "+ ecResponses[i].getEcCodeIndex() + " is " + decodeMatrix[ecResponses[i].getEcCodeIndex()].length);
             }
             else // code not available , allocate empty space
             {
@@ -346,7 +346,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             //String encoded_value = "testValue";
             // encoded_value = codelist.get(0) + codelist.get(1) ;
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
-            logger.info("Read Returning: encoded main computer value is "+ encoded_value);
+           // logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
             ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
