@@ -631,7 +631,7 @@ public class Keyspace
                                         {
                                             assert true == false;
                                         }
-                                        logger.error("3 Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + " thread "+ Thread.currentThread().getId());
+                                        logger.error("3 Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
 
 
                                         int isEC = 1;
@@ -654,7 +654,7 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
-                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "thread "+ Thread.currentThread().getId());
+                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
 
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
