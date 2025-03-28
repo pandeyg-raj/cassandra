@@ -563,6 +563,9 @@ public class Keyspace
                         if(isECwrite == 1)
                         {
                             logger.error("erasure code write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            cell.buffer().rewind();
+                            logger.error("erasure code after rewind pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+
                             continue;
                         }
                         String Messagevalue = ByteBufferUtil.string(cell.buffer());
