@@ -356,7 +356,10 @@ public abstract class ReadCommand extends AbstractReadQuery
         // validate that the sequence of RT markers is correct: open is followed by close, deletion times for both
         // ends equal, and there are no dangling RT bound in any partition.
         iterator = RTBoundValidator.validate(iterator, Stage.PROCESSED, true);
-
+        if(isDigestQuery())
+        {
+            logger.info("digest query ??");
+        }
         return isDigestQuery()
                ? ReadResponse.createDigestResponse(iterator, this)
                : ReadResponse.createDataResponse(iterator, this, rdi);
@@ -365,7 +368,10 @@ public abstract class ReadCommand extends AbstractReadQuery
     public ReadResponse createEmptyResponse()
     {
         UnfilteredPartitionIterator iterator = EmptyIterators.unfilteredPartition(metadata());
-        
+        if(isDigestQuery())
+        {
+            logger.info("digest query ??");
+        }
         return isDigestQuery()
                ? ReadResponse.createDigestResponse(iterator, this)
                : ReadResponse.createDataResponse(iterator, this, RepairedDataInfo.NO_OP_REPAIRED_DATA_INFO);

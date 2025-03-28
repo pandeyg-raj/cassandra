@@ -17,6 +17,7 @@
  */
 package org.apache.cassandra.service.reads;
 
+import java.awt.image.FilteredImageSource;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
@@ -189,7 +190,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         {
             Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
         }
-
+        logger.error("Got responses total "+snapshot.size());
         ECResponse[] ecResponses = new ECResponse[ECConfig.TOTAL_SHARDS];//new ECResponse[snapshot.size()];
         for(int i=0;i<ECConfig.TOTAL_SHARDS;i++)
         {
@@ -203,12 +204,19 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             
             //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
             ReadResponse response = message.payload;
-            tmp = message.payload;
+
 
             // check if the response is indeed a data response
             // we shouldn't get a digest response here
-            assert response.isDigestResponse() == false;
 
+            //assert response.isDigestResponse() == false;
+            if(response.isDigestResponse() == true)
+            {
+                logger.error("digest received");
+                continue;
+            }
+
+            tmp = message.payload;
             // get the partition iterator corresponding to the
             // current data response
             PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), command.nowInSec());
@@ -230,11 +238,18 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         ByteBuffer Finalbuffer = c.buffer();
 
                         int isEc = Finalbuffer.getInt();
-                        if( isEc !=1)
+                        if( isEc !=1) // not necessarly whole value, some "signal string from a new node just boot up,
+                           // cassandra send last message to bootup node, which is signal string"
                         {
-                            logger.info("Whole value found count" + ECConfig.wholeValueFound++);
                             Finalbuffer.position(0);
-                            ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                            if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                            {
+                                // garbage value consider lost
+                                logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining());
+                                continue;
+                            }
+                            logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
+                                        ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
                             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
                         }
 
@@ -247,7 +262,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         if(codeIndex < ECConfig.DATA_SHARDS) // data shard
                         {
 
-                            logger.error("data shard found index #"+codeIndex+ "shardSize"+ShardSize);
+                            logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
                             String value = ByteBufferUtil.string(Finalbuffer);
                             ecResponses[codeIndex].setEcCode(value);
                             //ecResponses[codeIndex].setCodeLength(value.length());
@@ -256,7 +271,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         }
                         else // parity shard
                         {
-                            logger.error("parity shard found index #"+codeIndex+ "shardSize"+ShardSize);
+                            logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
                             ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
 
 
