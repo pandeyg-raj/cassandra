@@ -568,6 +568,7 @@ public class Keyspace
                     {
                     logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         int isECwrite = cell.buffer().getInt();
+                        //should rewind here
                         logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         if(isECwrite == 1)
                         {
@@ -631,7 +632,7 @@ public class Keyspace
                                         {
                                             assert true == false;
                                         }
-                                        logger.error("3 Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
+                                        logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
 
 
                                         int isEC = 1;
@@ -665,7 +666,7 @@ public class Keyspace
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
-
+                                        logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
                                         mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", Finalbuffer);
                                         Mutation ECmutation = mutationBuilder.build();
 
