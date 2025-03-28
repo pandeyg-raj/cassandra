@@ -608,7 +608,12 @@ public class Keyspace
 
                                         ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes("data"));
                                         Cell c = r.getCell(colMeta);
+                                        long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
 
+                                        if(c.timestamp() !=current_timestamp ) // not the right value to erasure code
+                                        {
+                                            continue; // or break?
+                                        }
                                         String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
 
                                         // get the code index from ip address
@@ -665,7 +670,6 @@ public class Keyspace
                                         //logger.info("writin coded value " + coded_value + "original " + local_value);
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
-                                        long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                                         logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
                                         mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", Finalbuffer);
                                         Mutation ECmutation = mutationBuilder.build();
