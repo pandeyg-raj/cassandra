@@ -557,6 +557,14 @@ public class Keyspace
                     Map<String, Integer> signalMap;
                     try
                     {
+                    logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        int isECwrite = cell.buffer().getInt();
+                        logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        if(isECwrite == 1)
+                        {
+                            logger.error("erasure code write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            continue;
+                        }
                         String Messagevalue = ByteBufferUtil.string(cell.buffer());
 
                         if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
@@ -665,6 +673,8 @@ public class Keyspace
                     }
                     catch (IOException e)
                     {
+                        logger.error( " Mutation  Exception for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+
                         e.printStackTrace();
                     }
                 }
