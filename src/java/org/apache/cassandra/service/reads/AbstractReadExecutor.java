@@ -177,14 +177,17 @@ public abstract class AbstractReadExecutor
      */
     public void executeAsync()
     {
-        EndpointsForToken selected = replicaPlan().contacts(); // quorom replicas
         // raj debug start , send full data request to all (not just quorum)
+        EndpointsForToken selected = replicaPlan().contacts(); // quorom replicas
+
         EndpointsForToken fullDataRequests = replicaPlan().readCandidates() ; // selected.filter(Replica::isFull, initialDataRequestCount);
         // raj debug end
         makeFullDataRequests(fullDataRequests);
-        makeTransientDataRequests(selected.filterLazily(Replica::isTransient));
+        //logger.info("made full data request to  "+fullDataRequests.endpoints());
 
         // raj debug start , commenting digest request to all
+       // makeTransientDataRequests(selected.filterLazily(Replica::isTransient));
+
         //makeDigestRequests(selected.filterLazily(r -> r.isFull() && !fullDataRequests.contains(r)));
         // raj debugend
     }

@@ -20,6 +20,7 @@ package org.apache.cassandra.net;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.BiPredicate;
 
+import org.apache.cassandra.db.SinglePartitionReadCommand;
 import org.apache.cassandra.locator.InetAddressAndPort;
 
 /**
@@ -67,7 +68,18 @@ public class OutboundSink
 
     public void accept(Message<?> message, InetAddressAndPort to, ConnectionType connectionType)
     {
+
         sink.accept(message, to, connectionType);
+        //raj debug start
+       /* if(message.payload instanceof SinglePartitionReadCommand)
+        {
+
+            if(((SinglePartitionReadCommand)message.payload).isDigestQuery() == true)
+            {
+                int temp = 8; dummy line for breakpoint
+            }
+        }*/
+        //raj debug end
     }
 
     public void add(BiPredicate<Message<?>, InetAddressAndPort> allow)
