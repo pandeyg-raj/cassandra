@@ -338,6 +338,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
 
         // decode and combine values
+        ECConfig.DecodingNeeded++;
+        logger.error("Decoding needed number: "+ECConfig.DecodingNeeded);
+
 
         byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 

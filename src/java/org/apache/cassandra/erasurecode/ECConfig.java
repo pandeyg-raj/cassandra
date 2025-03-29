@@ -29,6 +29,7 @@ public class ECConfig
 
     public  static int wholeValueFound = 0;
     public  static int TotalSignalReceived = 0;
+    public  static int DecodingNeeded = 0;
 
 
 
