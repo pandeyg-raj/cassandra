@@ -558,7 +558,7 @@ public class Keyspace
                     throw new RuntimeException(e);
                 }
                 //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
-                if (cell.column().name.toString().equals("data"))
+                if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
                 {
                     //Tracing.trace("receive request for data");
                     logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
@@ -610,7 +610,7 @@ public class Keyspace
                                     {
                                         Row r = ri.next();
 
-                                        ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes("data"));
+                                        ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                                         Cell c = r.getCell(colMeta);
                                         long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
 
@@ -682,7 +682,7 @@ public class Keyspace
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                         logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
-                                        mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add("data", Finalbuffer);
+                                        mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);

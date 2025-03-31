@@ -24,6 +24,7 @@ import java.util.Iterator;
 import org.apache.cassandra.db.context.CounterContext;
 import org.apache.cassandra.db.marshal.AbstractType;
 import org.apache.cassandra.db.marshal.ValueAccessor;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.db.DeletionTime;
 import org.apache.cassandra.db.partitions.PartitionStatisticsCollector;
@@ -87,7 +88,7 @@ public abstract class Cells
         if(leftTimestamp == rightTimestamp)
         {
             // id column name is data blindly have latest (right?) update
-            if(left.column().name.toString().compareTo("data") == 0 )
+            if(left.column().name.toString().compareTo(ECConfig.EC_COLUMN) == 0 )
             {
                 return right;
             }

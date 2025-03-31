@@ -145,7 +145,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
                     // Traverse cells
                     for (Cell<?> cell : row.cells()) {
-                        if (cell.column().name.toString().equals("data")) {
+                        if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
                             // Modify target cell
                             rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
                         } else {
@@ -170,7 +170,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
     public boolean isMyRead()
     {
-        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes("data"));
+        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
         //logger.info("Raj Read for keyspace: "+ command.metadata().keyspace);
         boolean isMyRead = (tagMetadata != null);
         return isMyRead;
@@ -229,7 +229,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 {
                     // todo: the entire row is read for the sake of development
                     // future improvement could be made
-                    ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes("data"));
+                    ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                     try
                     {
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row

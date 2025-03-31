@@ -1130,7 +1130,7 @@ public class StorageProxy implements StorageProxyMBean
                 {
                     //logger.info("Raj StorageProxy mutation with followinf details already applied ");
                     //logger.info("Raj StorageProxy key is " + mutation.key().toString());
-                    if (cell.column().name.toString().equals("data"))
+                    if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
                     {
                         try
                         {
@@ -1143,19 +1143,19 @@ public class StorageProxy implements StorageProxyMBean
 
                             // EC_Service call here
 
-
+                            /*
                             String SignalStr = "signal," +
                                                String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
                                                String.valueOf(ECConfig.DATA_SHARDS) +"," +
                                                "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+                            */
 
 
-
-                            ByteBuffer Finalbuffer = ByteBufferUtil.bytes(SignalStr);
+                            ByteBuffer Finalbuffer = ByteBufferUtil.bytes(ECConfig.SignalStr);
                             // Finalbuffer.flip();
 
 
-                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("data", Finalbuffer);
+                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                             Mutation signalMutation = mutationBuilder.build();
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
