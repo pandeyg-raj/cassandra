@@ -68,7 +68,7 @@ allocate_tokens_for_local_replication_factor: 5
 # initial_token:
 
 # May either be "true" or "false" to enable globally
-hinted_handoff_enabled: true
+hinted_handoff_enabled: false
 
 # When hinted_handoff_enabled is true, a black list of data centers that will not
 # perform hinted handoff
