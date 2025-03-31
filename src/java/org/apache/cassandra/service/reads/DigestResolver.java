@@ -236,14 +236,16 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         ByteBuffer Finalbuffer = c.buffer();
 
                         byte isEc = Finalbuffer.get();
+
                         //if isEc !=1  not necessarly whole value, some "signal string from a new node just boot up,
                         // cassandra send last message to bootup node , which is signal string ?"
 
                         if( isEc !=1)
                         {
+                            Finalbuffer.position(0);
                             if(isEc == 0) // whole value
                             {
-                                Finalbuffer.position(0);
+                                Finalbuffer.position(1);
                                 logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
                                 ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
                                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
@@ -251,7 +253,6 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             }
                             else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
                             {
-                                Finalbuffer.position(0);
                                 // garbage value consider lost
                                 logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining());
                                 continue;
