@@ -621,6 +621,13 @@ public class Keyspace
                                         {
                                             continue; // or break?
                                         }
+                                        byte firstByte = c.buffer().get();
+
+                                        if(firstByte != 0) // replicated data first byte shoul be zero
+                                        {
+                                            assert false;
+                                        }
+
                                         String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
 
                                         // get the code index from ip address
