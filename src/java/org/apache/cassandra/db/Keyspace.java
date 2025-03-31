@@ -565,33 +565,30 @@ public class Keyspace
 
                     try
                     {
-                    logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         byte isECwrite = cell.buffer().get();
-                        //should rewind here
+                        cell.buffer().rewind();
                         logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         if(isECwrite == 1) // write after ecoding, do nothing
                         {
-                            logger.error("erasure code write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                            cell.buffer().rewind();
-                            logger.error("erasure code after rewind pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
 
                             continue;
                         }
                         else if(isECwrite == 0 ) // original write do nothing
                         {
-                            logger.error("original write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                            cell.buffer().rewind();
-                            logger.error("original write after rewind pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
 
                             continue;
                         }
-                        String Messagevalue = ByteBufferUtil.string(cell.buffer());
 
-                        if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
+                         // if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
+                        else if(isECwrite == 115 )
                         {
+                            String Messagevalue = ByteBufferUtil.string(cell.buffer());
                             ECConfig.TotalSignalReceived++;
                             //Tracing.trace("EC Signal received at Storage layer");
-                            logger.error("2 Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
+                            logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
