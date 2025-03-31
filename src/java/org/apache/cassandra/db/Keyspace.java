@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -563,18 +562,26 @@ public class Keyspace
                 {
                     //Tracing.trace("receive request for data");
                     logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
-                    Map<String, Integer> signalMap;
+
                     try
                     {
                     logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                        int isECwrite = cell.buffer().getInt();
+                        byte isECwrite = cell.buffer().get();
                         //should rewind here
                         logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                        if(isECwrite == 1)
+                        if(isECwrite == 1) // write after ecoding, do nothing
                         {
                             logger.error("erasure code write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                             cell.buffer().rewind();
                             logger.error("erasure code after rewind pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+
+                            continue;
+                        }
+                        else if(isECwrite == 0 ) // original write do nothing
+                        {
+                            logger.error("original write skipping" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            cell.buffer().rewind();
+                            logger.error("original write after rewind pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
 
                             continue;
                         }
@@ -640,7 +647,7 @@ public class Keyspace
                                         logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
 
 
-                                        int isEC = 1;
+                                        byte isEC = 1;
                                         // finish encode data
                                         byte [][]encodeMatrix = new ErasureCode().MyEncode(local_value,n,k);
 
@@ -651,8 +658,8 @@ public class Keyspace
                                         String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
                                         int coded_valueLength = encodeMatrix[codeIndex].length;
 
-                                        ByteBuffer Finalbuffer = ByteBuffer.allocate((5*4) + coded_valueLength);
-                                        Finalbuffer.putInt(isEC);
+                                        ByteBuffer Finalbuffer = ByteBuffer.allocate(( 1  + (4*4)) + coded_valueLength);
+                                        Finalbuffer.put(isEC);
                                         Finalbuffer.putInt(n);
                                         Finalbuffer.putInt(k);
                                         Finalbuffer.putInt(codeIndex);
@@ -685,6 +692,10 @@ public class Keyspace
 
                             //Tracing.trace("local reading for EC Storage layer");
 
+                        }
+                        else // this should never happen
+                        {
+                            assert true == false;
                         }
 
                     }

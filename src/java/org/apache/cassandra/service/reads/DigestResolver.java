@@ -17,9 +17,7 @@
  */
 package org.apache.cassandra.service.reads;
 
-import java.awt.image.FilteredImageSource;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -237,20 +235,31 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
                         ByteBuffer Finalbuffer = c.buffer();
 
-                        int isEc = Finalbuffer.getInt();
-                        if( isEc !=1) // not necessarly whole value, some "signal string from a new node just boot up,
-                           // cassandra send last message to bootup node, which is signal string"
+                        byte isEc = Finalbuffer.get();
+                        //if isEc !=1  not necessarly whole value, some "signal string from a new node just boot up,
+                        // cassandra send last message to bootup node , which is signal string ?"
+
+                        if( isEc !=1)
                         {
-                            Finalbuffer.position(0);
-                            if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                            if(isEc == 0) // whole value
                             {
+                                Finalbuffer.position(0);
+                                logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
+                                ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+
+                            }
+                            else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                            {
+                                Finalbuffer.position(0);
                                 // garbage value consider lost
                                 logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining());
                                 continue;
                             }
-                            logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
-                                        ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
-                            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+                            else// this should never happen
+                            {
+                                assert true == false;
+                            }
                         }
 
                         int n = Finalbuffer.getInt();
