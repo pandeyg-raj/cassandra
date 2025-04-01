@@ -1048,11 +1048,7 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         }
 
         completeInitialization();
-
-        //raj debug start initialisation ec data
-        ECConfig.initECConfig();
-        //raj debug end
-    }
+}
 
     @VisibleForTesting
     public void completeInitialization()

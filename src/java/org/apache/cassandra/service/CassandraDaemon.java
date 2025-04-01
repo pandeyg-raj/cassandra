@@ -54,6 +54,7 @@ import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.db.virtual.SystemViewsKeyspace;
 import org.apache.cassandra.db.virtual.VirtualKeyspaceRegistry;
 import org.apache.cassandra.db.virtual.VirtualSchemaKeyspace;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.StartupException;
 import org.apache.cassandra.gms.Gossiper;
@@ -273,6 +274,11 @@ public class CassandraDaemon
         Thread.setDefaultUncaughtExceptionHandler(JVMStabilityInspector::uncaughtException);
 
         SystemKeyspaceMigrator41.migrate();
+
+
+        //raj debug start initialisation ec data
+        ECConfig.initECConfig();
+        //raj debug end
 
         // Populate token metadata before flushing, for token-aware sstable partitioning (#6696)
         StorageService.instance.populateTokenMetadata();
