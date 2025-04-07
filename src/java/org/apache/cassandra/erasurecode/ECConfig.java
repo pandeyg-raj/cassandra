@@ -19,10 +19,9 @@
 package org.apache.cassandra.erasurecode;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -45,7 +44,7 @@ public class ECConfig
     public  static int wholeValueFound = 0;
     public  static int TotalSignalReceived = 0;
     public  static int DecodingNeeded = 0;
-
+    public  static PrintWriter myWriter ;
 
 
     public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.186","10.0.0.106","10.0.0.15"};
@@ -90,8 +89,9 @@ public class ECConfig
                        String.valueOf(DATA_SHARDS) +"," +
                        data.get("ec_configs").toString();
 
+            myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 

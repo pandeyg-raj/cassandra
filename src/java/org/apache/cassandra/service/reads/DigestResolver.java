@@ -273,8 +273,8 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         {
 
                             logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
-                            String value = ByteBufferUtil.string(Finalbuffer);
-                            ecResponses[codeIndex].setEcCode(value);
+                            //String value = ByteBufferUtil.string(Finalbuffer);
+                            //ecResponses[codeIndex].setEcCode(value);
                             //ecResponses[codeIndex].setCodeLength(value.length());
                             ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
 
@@ -348,9 +348,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
 
         // decode and combine values
-        ECConfig.DecodingNeeded++;
-        logger.error("Decoding needed number: "+ECConfig.DecodingNeeded);
-
+        long decodeStart = nanoTime();
 
         byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 
@@ -371,6 +369,10 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         try
         {
             String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
+
+            ECConfig.DecodingNeeded++;
+            ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
+
             //String encoded_value = "testValue";
             // encoded_value = codelist.get(0) + codelist.get(1) ;
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
