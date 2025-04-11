@@ -25,10 +25,27 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.yaml.snakeyaml.Yaml;
 
 public class ECConfig
 {
+private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
+
+
+    // raj debug start performance breckdown
+    // Normal read
+    public static volatile long readCacheTime = 0;
+    public static volatile long readMemtableTime = 0;
+    public static volatile long readSSTableTime = 0;
+    public static volatile int readCacheTimeC = 0;
+    public static volatile int readMemtableTimeC = 0;
+    public static volatile int readSSTableTimeC = 0;
+    // raj debug end
+
+
     public static int DATA_SHARDS ;
     public static int PARITY_SHARDS ;
     public static int TOTAL_SHARDS ;
@@ -101,4 +118,11 @@ public class ECConfig
         return map;
     }
 
+    public static void PrintBreackdown()
+    {
+        logger.info(" Cache  access Count :" + readCacheTimeC + "Total value: " +readCacheTime + "(ns)\n" +
+                    " Memtbl access Count :" + readMemtableTimeC + "Total value: " +readMemtableTime + "(ms)\n" +
+                    " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
+
+    }
 }

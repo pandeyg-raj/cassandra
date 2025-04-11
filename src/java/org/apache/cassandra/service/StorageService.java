@@ -999,6 +999,7 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
                 finally
                 {
                     //raj debug closing files
+                    ECConfig.PrintBreackdown();
                     logger.info("closing files before shutdown");
                     ECConfig.myWriter.close();
                     // raj debug end

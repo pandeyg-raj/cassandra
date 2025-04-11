@@ -63,6 +63,7 @@ import org.apache.cassandra.db.transform.RTBoundValidator;
 import org.apache.cassandra.db.transform.Transformation;
 import org.apache.cassandra.db.virtual.VirtualKeyspaceRegistry;
 import org.apache.cassandra.db.virtual.VirtualTable;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.io.sstable.SSTableReadsListener;
@@ -499,7 +500,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
     {
         assert !cfs.isIndex(); // CASSANDRA-5732
         assert cfs.isRowCacheEnabled() : String.format("Row cache is not enabled on table [%s]", cfs.name);
-
+        long startTime = System.nanoTime();
         RowCacheKey key = new RowCacheKey(metadata(), partitionKey());
 
         // Attempt a sentinel-read-cache sequence.  if a write invalidates our sentinel, we'll return our
@@ -513,6 +514,9 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 // Some other read is trying to cache the value, just do a normal non-caching read
                 Tracing.trace("Row cache miss (race)");
                 cfs.metric.rowCacheMiss.inc();
+                long cacheTimeCost = System.nanoTime() - startTime;
+                ECConfig.readCacheTime += cacheTimeCost;
+                ECConfig.readCacheTimeC++;
                 return queryMemtableAndDisk(cfs, executionController);
             }
 
@@ -523,11 +527,17 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 Tracing.trace("Row cache hit");
                 UnfilteredRowIterator unfilteredRowIterator = clusteringIndexFilter().getUnfilteredRowIterator(columnFilter(), cachedPartition);
                 cfs.metric.updateSSTableIterated(0);
+                long cacheTimeCost = System.nanoTime() - startTime;
+                ECConfig.readCacheTime += cacheTimeCost;
+                ECConfig.readCacheTimeC++;
                 return unfilteredRowIterator;
             }
 
             cfs.metric.rowCacheHitOutOfRange.inc();
             Tracing.trace("Ignoring row cache as cached value could not satisfy query");
+            long cacheTimeCost = System.nanoTime() - startTime;
+            ECConfig.readCacheTime += cacheTimeCost;
+            ECConfig.readCacheTimeC++;
             return queryMemtableAndDisk(cfs, executionController);
         }
 
@@ -692,7 +702,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         try
         {
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
-
+            long startTime = System.currentTimeMillis();
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -709,7 +719,9 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
-
+            long memtableTimeCost = System.currentTimeMillis() - startTime;
+            ECConfig.readMemtableTime += memtableTimeCost;
+            ECConfig.readMemtableTimeC++;
             /*
              * We can't eliminate full sstables based on the timestamp of what we've already read like
              * in collectTimeOrderedData, but we still want to eliminate sstable whose maxTimestamp < mostRecentTombstone
@@ -729,6 +741,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             if (controller.isTrackingRepairedStatus())
                 Tracing.trace("Collecting data from sstables and tracking repaired status");
 
+            long startSSTableTime = System.currentTimeMillis();
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -795,6 +808,15 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 }
             }
 
+            // raj debug start full block addition
+            long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+            if (!view.sstables.isEmpty() &&
+                view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
+                ECConfig.readSSTableTime += sstableTimeCost;
+                ECConfig.readSSTableTimeC++;
+            }
+
+            // raj end
             if (Tracing.isTracing())
                 Tracing.trace("Skipped {}/{} non-slice-intersecting sstables, included {} due to tombstones",
                                nonIntersectingSSTables, view.sstables.size(), includedDueToTombstones);
@@ -925,6 +947,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
 
         Tracing.trace("Merging memtable contents");
+        long startMemtableTime = System.currentTimeMillis();
         for (Memtable memtable : view.memtables)
         {
             try (UnfilteredRowIterator iter = memtable.rowIterator(partitionKey, filter.getSlices(metadata()), columnFilter(), isReversed(), metricsCollector))
@@ -939,9 +962,13 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
+        long memtableTimeCost = System.currentTimeMillis() - startMemtableTime;
+        ECConfig.readMemtableTime += memtableTimeCost;
+        ECConfig.readMemtableTimeC++;
 
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
+        long startSSTableTime = System.currentTimeMillis();
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
         {
@@ -1009,6 +1036,13 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              sstable.isRepaired(),
                              controller);
             }
+        }
+
+        long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+        if (!view.sstables.isEmpty() &&
+            view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
+            ECConfig.readSSTableTime += sstableTimeCost;
+            ECConfig.readSSTableTimeC++;
         }
 
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
