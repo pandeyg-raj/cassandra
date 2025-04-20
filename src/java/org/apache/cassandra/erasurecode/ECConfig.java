@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +44,8 @@ private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
     public static volatile int readCacheTimeC = 0;
     public static volatile int readMemtableTimeC = 0;
     public static volatile int readSSTableTimeC = 0;
+    public static AtomicInteger writeCount = new AtomicInteger(0);
+    public static AtomicInteger signalCount = new AtomicInteger(0);
     // raj debug end
 
 
