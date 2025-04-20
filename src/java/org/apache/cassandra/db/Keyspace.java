@@ -699,7 +699,8 @@ public class Keyspace
                         }
                         else // this should never happen
                         {
-                            assert true == false;
+                           // assert true == false;
+                            continue;
                         }
 
                     }

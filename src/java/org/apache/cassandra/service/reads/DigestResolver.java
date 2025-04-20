@@ -188,7 +188,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         {
             Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
         }
-        logger.error("Got responses total "+snapshot.size());
+        //logger.error("Got responses total "+snapshot.size());
         ECResponse[] ecResponses = new ECResponse[ECConfig.TOTAL_SHARDS];//new ECResponse[snapshot.size()];
         for(int i=0;i<ECConfig.TOTAL_SHARDS;i++)
         {
@@ -272,7 +272,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         if(codeIndex < ECConfig.DATA_SHARDS) // data shard
                         {
 
-                            logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
+                           // logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
                             //String value = ByteBufferUtil.string(Finalbuffer);
                             //ecResponses[codeIndex].setEcCode(value);
                             //ecResponses[codeIndex].setCodeLength(value.length());
@@ -281,7 +281,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         }
                         else // parity shard
                         {
-                            logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
+                           // logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
                             ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
 
 
