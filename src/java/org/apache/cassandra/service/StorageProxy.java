@@ -1159,9 +1159,9 @@ public class StorageProxy implements StorageProxyMBean
                             Mutation signalMutation = mutationBuilder.build();
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
-                            logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
+                            //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
                             mutate(signalMutations, consistencyLevel, requestTime);
-                            logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
+                            //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
                         {
@@ -1224,7 +1224,7 @@ public class StorageProxy implements StorageProxyMBean
             else
             {
 
-                logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
+                //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
                 mutate(mutations, consistencyLevel, requestTime);
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
@@ -1235,7 +1235,7 @@ public class StorageProxy implements StorageProxyMBean
                     @Override
                     public void run() {
                         // Function to run in the separate thread
-                        logger.error("Signal Sent count: "+ECConfig.signalCount.getAndIncrement());
+                        //logger.error("Signal Sent count: "+ECConfig.signalCount.getAndIncrement());
                         sendECSignal(mutations,consistencyLevel, requestTime);
                     }
                 });

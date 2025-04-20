@@ -561,23 +561,23 @@ public class Keyspace
                 if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
                 {
                     //Tracing.trace("receive request for data");
-                    logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+                    //logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
 
                     try
                     {
-                        logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        //logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         byte isECwrite = cell.buffer().get();
                         cell.buffer().rewind();
-                        logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        //logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
                         if(isECwrite == 1) // write after ecoding, do nothing
                         {
-                            logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            //logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
 
                             continue;
                         }
                         else if(isECwrite == 0 ) // original write do nothing
                         {
-                            logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            //logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
 
                             continue;
                         }
@@ -588,7 +588,7 @@ public class Keyspace
                             String Messagevalue = ByteBufferUtil.string(cell.buffer());
                             ECConfig.TotalSignalReceived++;
                             //Tracing.trace("EC Signal received at Storage layer");
-                            logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
+                            //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
                             // here read local value and erasure code and write in mutation
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -648,7 +648,7 @@ public class Keyspace
                                         {
                                             assert true == false;
                                         }
-                                        logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
+                                        //logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
 
 
                                         byte isEC = 1;
@@ -671,7 +671,7 @@ public class Keyspace
                                         Finalbuffer.put(encodeMatrix[codeIndex]);
                                         Finalbuffer.flip();
 
-                                        logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
+                                        //logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
 
                                         //Tracing.trace("ECed new value {} Storage layer",coded_value);
                                         // here updated value should be Erasure code part based on server
@@ -681,12 +681,12 @@ public class Keyspace
                                         //logger.info("writin coded value " + coded_value + "original " + local_value);
 
                                         Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
-                                        logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
+                                        //logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
                                         mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                         Mutation ECmutation = mutationBuilder.build();
 
                                         applyInternal(ECmutation, true, true, isDroppable, isDeferrable, future);
-                                        logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
+                                        //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
                                        // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                        // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
                                         return future;
