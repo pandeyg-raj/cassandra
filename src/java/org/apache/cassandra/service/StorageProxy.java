@@ -1229,8 +1229,9 @@ public class StorageProxy implements StorageProxyMBean
                 mutate(mutations, consistencyLevel, requestTime);
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
-                //sendECSignal(mutations,consistencyLevel, requestTime);
+                sendECSignal(mutations,consistencyLevel, requestTime);
 
+                /*
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -1242,6 +1243,7 @@ public class StorageProxy implements StorageProxyMBean
 
                 // Start the thread
                 thread.start();
+                */
             }
         }
     }
