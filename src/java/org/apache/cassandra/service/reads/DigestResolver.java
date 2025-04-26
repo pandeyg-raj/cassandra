@@ -246,7 +246,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             if(isEc == 0) // whole value
                             {
                                 Finalbuffer.position(1);
-                                logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
+                                //logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
                                 ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
                                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
 
