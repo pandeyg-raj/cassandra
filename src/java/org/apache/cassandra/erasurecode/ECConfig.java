@@ -17,35 +17,37 @@
  */
 
 package org.apache.cassandra.erasurecode;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.yaml.snakeyaml.Yaml;
 
 public class ECConfig
 {
-private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
-
-
-    // raj debug start performance breckdown
-    // Normal read
-    public static volatile long readCacheTime = 0;
-    public static volatile long readMemtableTime = 0;
-    public static volatile long readSSTableTime = 0;
-    public static volatile int readCacheTimeC = 0;
-    public static volatile int readMemtableTimeC = 0;
-    public static volatile int readSSTableTimeC = 0;
-    public static AtomicInteger writeCount = new AtomicInteger(0);
-    public static AtomicInteger signalCount = new AtomicInteger(0);
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+//// --Commented out by Inspection (4/25/25, 9:34 PM):private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
+//
+//
+//    // raj debug start performance breckdown
+//    // Normal read
+//    /*
+//    public static volatile long readCacheTime = 0;
+//
+//    public static volatile long readMemtableTime = 0;
+//    public static volatile long readSSTableTime = 0;
+//    public static volatile int readCacheTimeC = 0;
+//    public static volatile int readMemtableTimeC = 0;
+//    public static volatile int readSSTableTimeC = 0;
+//    */
+//// --Commented out by Inspection START (4/25/25, 9:34 PM):
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
+//    public static AtomicInteger writeCount = new AtomicInteger(0);
+//    public static AtomicInteger signalCount = new AtomicInteger(0);
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
     // raj debug end
 
 
@@ -57,32 +59,42 @@ private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
     /*
     = "signal," +
                        String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
-                       String.valueOf(ECConfig.DATA_SHARDS) +"," +
-                       "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+//                       String.valueOf(ECConfig.DATA_SHARDS) +"," +
+//                       "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2";
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
     */
 
     public  static int wholeValueFound = 0;
-    public  static int TotalSignalReceived = 0;
-    public  static int DecodingNeeded = 0;
-    public  static PrintWriter myWriter ;
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+//    //public  static int TotalSignalReceived = 0;
+//    public  static int DecodingNeeded = 0;
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
+    //public  static PrintWriter myWriter ;
 
 
-    public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.186","10.0.0.106","10.0.0.15"};
+    //public static final String[] ADDRESSES = {"10.0.0.20","10.0.0.186","10.0.0.106","10.0.0.15"};
 
     private static HashMap<String, Integer> map = new HashMap<>();
 
-    //public static final int QUORUM = (int) Math.ceil ( (ECConfig.num_server + ECConfig.num_intersect) / 2);
-
-
-    // Convert the byte array to String to send back to client
-    public static String byteToString(byte[] bytes) {
-        return new String(bytes, StandardCharsets.UTF_8);
-    }
-
-    // Convert incoming String value
-    public static byte[] stringToByte(String value) {
-       return value.getBytes(StandardCharsets.UTF_8);
-       }
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+//    //public static final int QUORUM = (int) Math.ceil ( (ECConfig.num_server + ECConfig.num_intersect) / 2);
+//
+//
+//// --Commented out by Inspection START (4/25/25, 9:34 PM):
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
+//    // Convert the byte array to String to send back to client
+//    public static String byteToString(byte[] bytes) {
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+////        return new String(bytes, StandardCharsets.UTF_8);
+////    }
+//// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
+//
+//    // Convert incoming String value
+//    public static byte[] stringToByte(String value) {
+//       return value.getBytes(StandardCharsets.UTF_8);
+//       }
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
 
     // Create the Empty Codes based on what I set
     public static byte[] emptyCodes(int length) {
@@ -104,12 +116,14 @@ private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
             PARITY_SHARDS = (int) data.get("parity_shards");
             TOTAL_SHARDS = DATA_SHARDS + PARITY_SHARDS ;
             EC_COLUMN = data.get("ec_column").toString();
-            SignalStr ="signal," +
-                       String.valueOf(TOTAL_SHARDS) +"," +
-                       String.valueOf(DATA_SHARDS) +"," +
+// --Commented out by Inspection START (4/25/25, 9:34 PM):
+//            SignalStr ="signal," +
+//                       String.valueOf(TOTAL_SHARDS) +"," +
+//                       String.valueOf(DATA_SHARDS) +"," +
+// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
                        data.get("ec_configs").toString();
 
-            myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
+            //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -121,11 +135,11 @@ private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
         return map;
     }
 
-    public static void PrintBreackdown()
+    /*public static void PrintBreackdown()
     {
         logger.info(" Cache  access Count :" + readCacheTimeC + "Total value: " +readCacheTime + "(ns)\n" +
                     " Memtbl access Count :" + readMemtableTimeC + "Total value: " +readMemtableTime + "(ms)\n" +
                     " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
 
-    }
+    }*/
 }

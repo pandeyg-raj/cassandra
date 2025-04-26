@@ -180,7 +180,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
     {
         // array to keep track which code part is available
         boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
-        boolean IswholeValue = false;
+        //boolean IswholeValue = false;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
 
@@ -263,8 +263,8 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             }
                         }
 
-                        int n = Finalbuffer.getInt();
-                        int k = Finalbuffer.getInt();
+                        //int n = Finalbuffer.getInt();
+                        //int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
                         ShardSize = coded_valueLength;
@@ -348,7 +348,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
 
         // decode and combine values
-        long decodeStart = nanoTime();
+        //long decodeStart = nanoTime();
 
         byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 
@@ -370,8 +370,8 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         {
             String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
 
-            ECConfig.DecodingNeeded++;
-            ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
+            //ECConfig.DecodingNeeded++;
+            //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
 
             //String encoded_value = "testValue";
             // encoded_value = codelist.get(0) + codelist.get(1) ;

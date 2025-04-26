@@ -542,7 +542,7 @@ public class Keyspace
 
 
         // Raj debug start signal received here
-        String value = "";
+       // String value = "";
         Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
         if (data != null)
         {
@@ -586,7 +586,7 @@ public class Keyspace
                         else if(isECwrite == 115 )
                         {
                             String Messagevalue = ByteBufferUtil.string(cell.buffer());
-                            ECConfig.TotalSignalReceived++;
+                            //ECConfig.TotalSignalReceived++;
                             //Tracing.trace("EC Signal received at Storage layer");
                             //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
@@ -659,7 +659,7 @@ public class Keyspace
 
                                         // find code index corresponding to ip
 
-                                        String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
+                                        //String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
                                         int coded_valueLength = encodeMatrix[codeIndex].length;
 
                                         ByteBuffer Finalbuffer = ByteBuffer.allocate(( 1  + (4*4)) + coded_valueLength);
