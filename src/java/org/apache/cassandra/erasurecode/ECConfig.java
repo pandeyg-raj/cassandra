@@ -116,11 +116,10 @@ public class ECConfig
             PARITY_SHARDS = (int) data.get("parity_shards");
             TOTAL_SHARDS = DATA_SHARDS + PARITY_SHARDS ;
             EC_COLUMN = data.get("ec_column").toString();
-// --Commented out by Inspection START (4/25/25, 9:34 PM):
-//            SignalStr ="signal," +
-//                       String.valueOf(TOTAL_SHARDS) +"," +
-//                       String.valueOf(DATA_SHARDS) +"," +
-// --Commented out by Inspection STOP (4/25/25, 9:34 PM)
+
+            SignalStr ="signal," +
+                       String.valueOf(TOTAL_SHARDS) +"," +
+                       String.valueOf(DATA_SHARDS) +"," +
                        data.get("ec_configs").toString();
 
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
