@@ -262,9 +262,10 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                                 assert true == false;
                             }
                         }
-
-                        //int n = Finalbuffer.getInt();
-                        //int k = Finalbuffer.getInt();
+                        // do not comment below , need to remove from finalbuffer
+                        // to move pointer forward
+                        int n = Finalbuffer.getInt();
+                        int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
                         ShardSize = coded_valueLength;
