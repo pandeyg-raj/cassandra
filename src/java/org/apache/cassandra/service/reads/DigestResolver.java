@@ -239,6 +239,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
                         Cell c =null;
                         for (Cell<?> cell : row.cells()) {
+                            logger.info("cell name  is  "+ cell.column().name.toString());
                             if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
                                 // Modify target cell
                                c = cell;
