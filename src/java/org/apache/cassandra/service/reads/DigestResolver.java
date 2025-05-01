@@ -232,23 +232,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                     try
                     {
-
-                        logger.info("col meta data for col:"+ECConfig.EC_COLUMN+ " is "+  colMeta);
-                        Row row = ri.next();
-                        logger.info("debug1 row"+ row);
-
-                        Cell c =null;
-                        for (Cell<?> cell : row.cells()) {
-                            logger.info("cell name  is  "+ cell.column().name.toString());
-                            if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
-                                // Modify target cell
-                               c = cell;
-                                logger.info("debug3 target cell  "+ c);
-                            }
-                        }
-
-                        //Cell c = row.getCell(colMeta); // ri.next() = Row
-                        logger.info("cell is "+ c);
+                        Cell c = ri.next().getCell(colMeta); // ri.next() = Row
                         ByteBuffer Finalbuffer = c.buffer();
 
                         byte isEc = Finalbuffer.get();
