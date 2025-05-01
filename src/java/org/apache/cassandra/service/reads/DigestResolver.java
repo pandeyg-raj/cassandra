@@ -234,6 +234,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     {
                         logger.info("col meta data for col:"+ECConfig.EC_COLUMN+ " is "+  colMeta);
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
+                        logger.info("cell is "+c);
                         ByteBuffer Finalbuffer = c.buffer();
 
                         byte isEc = Finalbuffer.get();
