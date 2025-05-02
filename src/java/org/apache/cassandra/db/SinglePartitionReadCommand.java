@@ -607,7 +607,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     {
                         Tracing.trace("Caching {} rows", toCache.rowCount());
                         boolean cacheAddResult = CacheService.instance.rowCache.replace(key, sentinel, toCache);
-                        logger.info("Cache add result = "+cacheAddResult);
+                        //logger.info("Cache add result = "+cacheAddResult);
                         // Whether or not the previous replace has worked, our sentinel is not in the cache anymore
                         sentinelReplaced = true;
                     }
