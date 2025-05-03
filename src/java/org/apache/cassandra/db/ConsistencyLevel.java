@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 
 import com.carrotsearch.hppc.ObjectIntHashMap;
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.locator.AbstractReplicationStrategy;
 import org.apache.cassandra.locator.Endpoints;
