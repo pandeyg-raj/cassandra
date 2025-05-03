@@ -96,8 +96,8 @@ public enum ConsistencyLevel
     {
         //rajj debug start change quorum size
 
-          return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
-        //return (ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS / 2));
+         // return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        return (ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS / 2));
 
 
         // int quorum = (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
