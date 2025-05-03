@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 
 import com.carrotsearch.hppc.ObjectIntHashMap;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.locator.AbstractReplicationStrategy;
 import org.apache.cassandra.locator.Endpoints;
@@ -97,11 +96,14 @@ public enum ConsistencyLevel
     {
         //rajj debug start change quorum size
 
-         // return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
-       // int quorum = (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
-        int quorum = ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS / 2);
+          return (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        //return (ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS / 2));
+
+
+        // int quorum = (replicationStrategy.getReplicationFactor().allReplicas / 2) + 1;
+        //int quorum = (ECConfig.DATA_SHARDS + (ECConfig.PARITY_SHARDS / 2));
         //logger.info("quorum resolved to :  "+quorum);
-        return (quorum);
+        //return (quorum);
 
         //rajj debug end
     }
