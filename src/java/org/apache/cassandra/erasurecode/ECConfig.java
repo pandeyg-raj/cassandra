@@ -76,7 +76,7 @@ public class ECConfig
     public  static AtomicInteger TotalEcWriteReceived ;//    public  static int DecodingNeeded = 0;
     public  static AtomicInteger TotalSignalSent ;
     public  static AtomicInteger TotalReplicateWriteSent ;
-
+    public  static AtomicInteger TotalSignalApplied;
 
 // --Commented out by Inspection STOP (4/25/25, 9:34 PM)
     //public  static PrintWriter myWriter ;
@@ -121,6 +121,7 @@ public class ECConfig
         TotalReplicateWriteReceived = new AtomicInteger(0);
         TotalSignalSent = new AtomicInteger(0);
         TotalReplicateWriteSent = new AtomicInteger(0);
+        TotalSignalApplied = new AtomicInteger(0);
         try {
 
             InputStream inputStream = new FileInputStream(new File("./conf/ECConfig.yaml"));
@@ -155,9 +156,10 @@ public class ECConfig
                     " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
         */
         logger.info(" TotalReplicateWriteSent :" + TotalReplicateWriteSent + "\n" +
-                    " TotalReplicateWriteReceived :" + TotalReplicateWriteReceived + "\n" +
                     " TotalSignalSent :" + TotalSignalSent + "\n" +
+                    " TotalReplicateWriteReceived :" + TotalReplicateWriteReceived + "\n" +
                     " TotalSignalReceived :" + TotalSignalReceived + "\n" +
+                    " TotalSignalApplied :" + TotalSignalApplied + "\n" +
                     " TotalEcWriteReceived :" + TotalEcWriteReceived + "\n") ;
 
     }

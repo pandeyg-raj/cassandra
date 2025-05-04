@@ -692,6 +692,7 @@ public class Keyspace
                                             Mutation ECmutation = mutationBuilder.build();
 
                                             applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
+                                            ECConfig.TotalSignalApplied.incrementAndGet();
                                             //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
                                             // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                             // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
