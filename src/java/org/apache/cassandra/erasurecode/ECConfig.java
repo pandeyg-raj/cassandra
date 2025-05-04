@@ -23,13 +23,17 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.yaml.snakeyaml.Yaml;
 
 public class ECConfig
 {
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
-//// --Commented out by Inspection (4/25/25, 9:34 PM):private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
+    private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
 //
 //
 //    // raj debug start performance breckdown
@@ -67,8 +71,13 @@ public class ECConfig
 
     public  static int wholeValueFound = 0;
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
-//    //public  static int TotalSignalReceived = 0;
-//    public  static int DecodingNeeded = 0;
+    public  static AtomicInteger TotalSignalReceived ;
+    public  static AtomicInteger TotalReplicateWriteReceived ;
+    public  static AtomicInteger TotalEcWriteReceived ;//    public  static int DecodingNeeded = 0;
+    public  static AtomicInteger TotalSignalSent ;
+    public  static AtomicInteger TotalReplicateWriteSent ;
+
+
 // --Commented out by Inspection STOP (4/25/25, 9:34 PM)
     //public  static PrintWriter myWriter ;
 
@@ -107,6 +116,11 @@ public class ECConfig
 
     public static void initECConfig() {
 
+        TotalSignalReceived = new AtomicInteger(0);
+        TotalEcWriteReceived = new AtomicInteger(0);
+        TotalReplicateWriteReceived = new AtomicInteger(0);
+        TotalSignalSent = new AtomicInteger(0);
+        TotalReplicateWriteSent = new AtomicInteger(0);
         try {
 
             InputStream inputStream = new FileInputStream(new File("./conf/ECConfig.yaml"));
@@ -134,11 +148,17 @@ public class ECConfig
         return map;
     }
 
-    /*public static void PrintBreackdown()
+    public static void PrintBreackdown()
     {
-        logger.info(" Cache  access Count :" + readCacheTimeC + "Total value: " +readCacheTime + "(ns)\n" +
+        /* logger.info(" Cache  access Count :" + readCacheTimeC + "Total value: " +readCacheTime + "(ns)\n" +
                     " Memtbl access Count :" + readMemtableTimeC + "Total value: " +readMemtableTime + "(ms)\n" +
                     " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
+        */
+        logger.info(" Cache  access Count :" + TotalReplicateWriteSent + "\n" +
+                    " Cache  access Count :" + TotalReplicateWriteReceived + "\n" +
+                    " Cache  access Count :" + TotalSignalSent + "\n" +
+                    " Cache  access Count :" + TotalSignalReceived + "\n" +
+                    " Cache  access Count :" + TotalEcWriteReceived + "\n") ;
 
-    }*/
+    }
 }

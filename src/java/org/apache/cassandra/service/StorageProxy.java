@@ -1134,7 +1134,7 @@ public class StorageProxy implements StorageProxyMBean
                     {
                         try
                         {
-                            value = ByteBufferUtil.string(cell.buffer());
+                            //value = ByteBufferUtil.string(cell.buffer());
                             //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
                             //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
@@ -1161,6 +1161,7 @@ public class StorageProxy implements StorageProxyMBean
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
                             mutate(signalMutations, consistencyLevel, requestTime);
+                            ECConfig.TotalSignalSent.incrementAndGet();
                             //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
@@ -1227,11 +1228,12 @@ public class StorageProxy implements StorageProxyMBean
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
                 mutate(mutations, consistencyLevel, requestTime);
+                ECConfig.TotalReplicateWriteSent.incrementAndGet();
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
-                sendECSignal(mutations,consistencyLevel, requestTime);
 
-                /*
+                //sendECSignal(mutations,consistencyLevel, requestTime);
+
                 Thread thread = new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -1243,7 +1245,7 @@ public class StorageProxy implements StorageProxyMBean
 
                 // Start the thread
                 thread.start();
-                */
+
             }
         }
     }
