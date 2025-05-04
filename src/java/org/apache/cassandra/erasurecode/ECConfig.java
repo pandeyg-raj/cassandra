@@ -154,11 +154,11 @@ public class ECConfig
                     " Memtbl access Count :" + readMemtableTimeC + "Total value: " +readMemtableTime + "(ms)\n" +
                     " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
         */
-        logger.info(" Cache  access Count :" + TotalReplicateWriteSent + "\n" +
-                    " Cache  access Count :" + TotalReplicateWriteReceived + "\n" +
-                    " Cache  access Count :" + TotalSignalSent + "\n" +
-                    " Cache  access Count :" + TotalSignalReceived + "\n" +
-                    " Cache  access Count :" + TotalEcWriteReceived + "\n") ;
+        logger.info(" TotalReplicateWriteSent :" + TotalReplicateWriteSent + "\n" +
+                    " TotalReplicateWriteReceived :" + TotalReplicateWriteReceived + "\n" +
+                    " TotalSignalSent :" + TotalSignalSent + "\n" +
+                    " TotalSignalReceived :" + TotalSignalReceived + "\n" +
+                    " TotalEcWriteReceived :" + TotalEcWriteReceived + "\n") ;
 
     }
 }
