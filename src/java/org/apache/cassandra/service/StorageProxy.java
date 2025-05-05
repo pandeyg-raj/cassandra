@@ -1139,7 +1139,7 @@ public class StorageProxy implements StorageProxyMBean
                             //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                             logger.error("original Mutation:"+mutation);
-                            logger.error("mutationBuilder:"+mutationBuilder);
+                            //logger.error("mutationBuilder:"+mutationBuilder);
 
                             long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -1157,13 +1157,13 @@ public class StorageProxy implements StorageProxyMBean
                             ByteBuffer Finalbuffer = ByteBufferUtil.bytes(ECConfig.SignalStr);
                             // Finalbuffer.flip();
 
-                            logger.error("byte buffer signaal is "+ByteBufferUtil.string(Finalbuffer));
+                            //logger.error("byte buffer signaal is:"+ByteBufferUtil.string(Finalbuffer));
                             Finalbuffer.rewind();
                             mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
-                            logger.error("mutationBuilder2:"+mutationBuilder);
+                            //logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
                             logger.error("signalMutation:"+signalMutation);
-                            logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
+                            //logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
