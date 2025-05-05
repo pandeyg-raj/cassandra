@@ -1161,8 +1161,8 @@ public class StorageProxy implements StorageProxyMBean
                             Finalbuffer.rewind();
 
                             logger.error("tableMetadata:"+tableMetadata);
-                            logger.error("current_timestamp:"+current_timestamp);//Finalbuffer
-                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN,"hello" );
+                            logger.error("current_timestamp:"+current_timestamp);
+                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN,Finalbuffer );
 
                             //logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
