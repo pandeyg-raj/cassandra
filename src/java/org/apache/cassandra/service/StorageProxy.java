@@ -1138,9 +1138,11 @@ public class StorageProxy implements StorageProxyMBean
                             //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
                             //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                            logger.error("original Mutation:"+mutation);
+                            logger.error("mutationBuilder:"+mutationBuilder);
+
                             long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
-                            logger.error("final repplicate mutation"+mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
 
                             // EC_Service call here
 
@@ -1157,10 +1159,10 @@ public class StorageProxy implements StorageProxyMBean
 
                             logger.error("byte buffer signaal is "+ByteBufferUtil.string(Finalbuffer));
                             Finalbuffer.rewind();
-                            logger.error("byte buffer column is:"+ECConfig.EC_COLUMN+": ");
-                            Finalbuffer.rewind();
                             mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
+                            logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
+                            logger.error("signalMutation:"+signalMutation);
                             logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
