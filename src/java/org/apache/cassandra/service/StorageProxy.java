@@ -1140,6 +1140,7 @@ public class StorageProxy implements StorageProxyMBean
                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                             long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+                            logger.error("final repplicate mutation"+mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
 
                             // EC_Service call here
 
@@ -1160,7 +1161,7 @@ public class StorageProxy implements StorageProxyMBean
                             Finalbuffer.rewind();
                             mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                             Mutation signalMutation = mutationBuilder.build();
-                            logger.error("final mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
+                            logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
