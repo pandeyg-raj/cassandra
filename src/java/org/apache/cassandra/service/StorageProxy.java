@@ -1159,11 +1159,9 @@ public class StorageProxy implements StorageProxyMBean
 
                             //logger.error("byte buffer signaal is:"+ByteBufferUtil.string(Finalbuffer));
                             Finalbuffer.rewind();
+                                                            //ECConfig.EC_COLUMN
+                            mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row().add("hello", Finalbuffer);
 
-                            Row.SimpleBuilder tmpRow = mutationBuilder.update(tableMetadata).timestamp(current_timestamp).row();
-                            logger.error("Row before signal"+tmpRow);
-                            tmpRow.add(ECConfig.EC_COLUMN, Finalbuffer);
-                            logger.error("Row after signal"+tmpRow);
                             //logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
                             logger.error("signalMutation:"+signalMutation);
