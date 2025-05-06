@@ -633,6 +633,14 @@ public class Keyspace
 
                                             String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
 
+                                            if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
+                                            {
+                                                logger.info("Probelm value is:"+local_value + "tid" +Thread.currentThread().getId());
+                                                assert true == false;
+                                            }
+
+
+
                                             // get the code index from ip address
                                             String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
 
@@ -688,11 +696,22 @@ public class Keyspace
 
                                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                             //logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
+                                            Finalbuffer.rewind();
+                                            if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                                            {
+                                                logger.info("Problem bytebufffer tid:"+Thread.currentThread().getId());
+
+                                                assert true == false;
+
+                                            }
+                                            Finalbuffer.rewind();
                                             mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                             Mutation ECmutation = mutationBuilder.build();
 
                                             applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
                                             ECConfig.TotalSignalApplied.incrementAndGet();
+
+
                                             //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
                                             // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
                                             // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
