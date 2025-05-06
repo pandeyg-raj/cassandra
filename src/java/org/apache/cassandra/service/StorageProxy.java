@@ -1141,8 +1141,10 @@ public class StorageProxy implements StorageProxyMBean
                            // logger.error("original Mutation:"+mutation);
                             //logger.error("mutationBuilder:"+mutationBuilder);
 
-                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
                             TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+
+                            // long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp() ;
+                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
 
                             // EC_Service call here
 
