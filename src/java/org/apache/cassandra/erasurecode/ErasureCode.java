@@ -73,7 +73,7 @@ public class ErasureCode
             }
         }
         if (bytesRead != fileSize) {
-            throw new IOException("not enough bytes read");
+            throw new IOException("not enough bytes read, bytesRead :"+bytesRead+ " fileSize:"+fileSize);
         }
 
         // Make the buffers to hold the shards.
