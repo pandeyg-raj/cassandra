@@ -254,7 +254,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
                             {
                                 // garbage value consider lost
-                                logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining());
+                                logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining() + "tid:"+Thread.currentThread().getId());
                                 continue;
                             }
                             else// this should never happen
@@ -350,7 +350,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         // decode and combine values
         //long decodeStart = nanoTime();
-
+        logger.info("shard size" +ShardSize+ " tid:"+Thread.currentThread().getId());
         byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 
         for (int i = 0; i < ecResponses.length; i++) {
