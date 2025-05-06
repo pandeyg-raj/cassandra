@@ -696,7 +696,8 @@ public class Keyspace
 
                                             Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
                                             //logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
-                                            Finalbuffer.rewind();
+                                           //
+                                            /*Finalbuffer.rewind();
                                             if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
                                             {
                                                 logger.info("Problem bytebufffer tid:"+Thread.currentThread().getId());
@@ -705,6 +706,8 @@ public class Keyspace
 
                                             }
                                             Finalbuffer.rewind();
+
+                                             */
                                             mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                             Mutation ECmutation = mutationBuilder.build();
 
