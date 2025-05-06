@@ -624,6 +624,8 @@ public class Keyspace
                                             {
                                                 continue; // or break?
                                             }
+
+                                            logger.info("position "+ c.buffer().position());
                                             byte firstByte = c.buffer().get();
 
                                             if (firstByte != 0) // replicated data first byte shoul be zero
@@ -631,8 +633,14 @@ public class Keyspace
                                                 assert false;
                                             }
 
-                                            String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
 
+                                            String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
+                                            if(local_value.length() == 0)
+                                            {
+                                                c.buffer().rewind();
+                                                logger.info("position rewind "+ c.buffer().position());
+                                                logger.info("voild 0 "+ c.buffer().remaining());
+                                            }
                                             if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
                                             {
                                                 logger.info("Probelm value is:"+local_value + "tid" +Thread.currentThread().getId());
