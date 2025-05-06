@@ -582,8 +582,8 @@ public class Keyspace
                         else if(isECwrite == 0 ) // original write do nothing
                         {
                             ECConfig.TotalReplicateWriteReceived.incrementAndGet();
-                            //logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-
+                            logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+                            cell.buffer().rewind();
                             continue;
                         }
                         else if(isECwrite == 115 )
@@ -625,7 +625,6 @@ public class Keyspace
                                                 continue; // or break?
                                             }
 
-                                            logger.info("position "+ c.buffer().position());
                                             byte firstByte = c.buffer().get();
 
                                             if (firstByte != 0) // replicated data first byte shoul be zero
@@ -639,7 +638,7 @@ public class Keyspace
                                             {
                                                 c.buffer().rewind();
                                                 logger.info("position rewind "+ c.buffer().position());
-                                                logger.info("voild 0 "+ c.buffer().remaining());
+                                                logger.info("voila"+ c.buffer().remaining());
                                             }
                                             if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
                                             {
