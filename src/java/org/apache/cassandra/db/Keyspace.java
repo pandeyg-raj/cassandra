@@ -582,7 +582,10 @@ public class Keyspace
                         else if(isECwrite == 0 ) // original write do nothing
                         {
                             ECConfig.TotalReplicateWriteReceived.incrementAndGet();
-                            logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+                            if(cell.buffer().remaining() ==1)
+                            {
+                                logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
+                            }
                             cell.buffer().rewind();
                             continue;
                         }
