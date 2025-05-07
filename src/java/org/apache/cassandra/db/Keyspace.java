@@ -623,6 +623,11 @@ public class Keyspace
                                             Cell c = r.getCell(colMeta);
                                             long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
 
+                                            if(current_timestamp < 0)
+                                            {
+                                                logger.info("negativve timmestamp");
+                                            }
+
                                             if (c.timestamp() != current_timestamp) // not the right value to erasure code
                                             {
                                                 continue; // or break?
