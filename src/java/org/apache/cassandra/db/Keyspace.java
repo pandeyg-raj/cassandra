@@ -621,12 +621,11 @@ public class Keyspace
 
                                             ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                                             Cell c = r.getCell(colMeta);
-                                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
 
-                                            if(current_timestamp < 0)
-                                            {
-                                                logger.info("negativve timmestamp");
-                                            }
+
+                                            //long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
+                                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
+
 
                                             if (c.timestamp() != current_timestamp) // not the right value to erasure code
                                             {
