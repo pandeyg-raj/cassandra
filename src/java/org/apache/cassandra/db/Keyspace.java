@@ -637,18 +637,21 @@ public class Keyspace
 
 
                                             String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
+                                            /*
                                             if(local_value.length() == 0)
                                             {
                                                 c.buffer().rewind();
                                                 logger.info("position rewind "+ c.buffer().position());
                                                 logger.info("voila"+ c.buffer().remaining());
                                             }
+
+
                                             if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
                                             {
                                                 logger.info("Probelm value is:"+local_value + "tid" +Thread.currentThread().getId());
                                                 assert true == false;
                                             }
-
+                                            */
 
 
                                             // get the code index from ip address
