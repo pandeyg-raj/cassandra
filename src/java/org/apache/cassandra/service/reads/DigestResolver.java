@@ -350,7 +350,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         // decode and combine values
         //long decodeStart = nanoTime();
-        logger.info("shard size" +ShardSize+ " tid:"+Thread.currentThread().getId() );
+        //logger.info("shard size" +ShardSize+ " tid:"+Thread.currentThread().getId() );
         byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
 
         for (int i = 0; i < ecResponses.length; i++) {
