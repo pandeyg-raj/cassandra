@@ -92,7 +92,10 @@ public class CassandraRoleManager implements IRoleManager
      * duplicate creation or deletion + re-creation of this user on different nodes unless we check at quorum to see if
      * it's already been done.
      */
-    static final ConsistencyLevel DEFAULT_SUPERUSER_CONSISTENCY_LEVEL = ConsistencyLevel.QUORUM;
+
+    // raj debug start
+    static final ConsistencyLevel DEFAULT_SUPERUSER_CONSISTENCY_LEVEL = ConsistencyLevel.ONE;
+    // raj debug end
 
     // Transform a row in the AuthKeyspace.ROLES to a Role instance
     private static final Function<UntypedResultSet.Row, Role> ROW_TO_ROLE = row ->
@@ -432,6 +435,9 @@ public class CassandraRoleManager implements IRoleManager
         catch (RequestExecutionException e)
         {
             logger.warn("CassandraRoleManager skipped default role setup: some nodes were not ready");
+            QueryProcessor.process(createDefaultRoleQuery(),
+                                   consistencyForRoleWrite(DEFAULT_SUPERUSER_NAME));
+            logger.info("Created default superuser role '{}'", DEFAULT_SUPERUSER_NAME);
             throw e;
         }
     }

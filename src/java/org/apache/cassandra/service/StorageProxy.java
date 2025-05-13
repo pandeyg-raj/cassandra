@@ -2260,31 +2260,42 @@ public class StorageProxy implements StorageProxyMBean
             reads[i].awaitResponses(logBlockingRepairAttempts);
         }
 
+
         // read repair - if it looks like we may not receive enough full data responses to meet CL, send
         // an additional request to any remaining replicas we haven't contacted (if there are any)
-        for (int i=0; i<cmdCount; i++)
-        {
-            reads[i].maybeSendAdditionalDataRequests();
-        }
+        //for (int i=0; i<cmdCount; i++)
+        //{
+         //   reads[i].maybeSendAdditionalDataRequests();
+       // }
 
         // read repair - block on full data responses
-        for (int i=0; i<cmdCount; i++)
-        {
-            reads[i].awaitReadRepair();
-        }
+       // for (int i=0; i<cmdCount; i++)
+        //{
+        //    reads[i].awaitReadRepair();
+        //}
 
         // if we didn't do a read repair, return the contents of the data response, if we did do a read
         // repair, merge the full data reads
+
+
+
         List<PartitionIterator> results = new ArrayList<>(cmdCount);
-        List<ReadRepair<?, ?>> repairs = new ArrayList<>(cmdCount);
+
+       // List<ReadRepair<?, ?>> repairs = new ArrayList<>(cmdCount);
         for (int i=0; i<cmdCount; i++)
         {
             results.add(reads[i].getResult());
-            repairs.add(reads[i].getReadRepair());
+            // raj debug start , no read repair
+         //   repairs.add(reads[i].getReadRepair());
+            // raj debug end
         }
 
+        // raj debug start , return result without read repair
+        return PartitionIterators.concat(results);
+        // raj debug end
+
         // if we did a read repair, assemble repair mutation and block on them
-        return concatAndBlockOnRepair(results, repairs);
+        //return concatAndBlockOnRepair(results, repairs);
     }
 
     public static class LocalReadRunnable extends DroppableRunnable implements RunnableDebuggableTask
