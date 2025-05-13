@@ -322,6 +322,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
 
         String encoded_value = "";
+        ReadResponse tmpp;
         try
         {
             if(!IsEcDeccodeNeeded)
@@ -336,7 +337,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     //logger.info("Combining value:  " + encoded_value);
                 }
                 //logger.info("No decoding needed Combining value:  " + encoded_value);
-                ReadResponse tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
+                tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
             }
         }
