@@ -119,6 +119,8 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
     }
 
     public ReadResponse modifyCellValue(ReadResponse originalResponse,String encoded_value) {
+
+
         // Extract the data from the original response
         PartitionIterator partitions = UnfilteredPartitionIterators.filter(originalResponse.makeIterator(command), command.nowInSec());
         // Create a new PartitionIterator to hold the modified data
@@ -161,6 +163,11 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
                 resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
 
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException(e);
             }
         }
 
@@ -337,7 +344,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     //logger.info("Combining value:  " + encoded_value);
                 }
                 //logger.info("No decoding needed Combining value:  " + encoded_value);
+
                 tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
+
                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
             }
         }
@@ -391,7 +400,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
            // logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
-            ReadResponse tmpp = modifyCellValue(tmp,encoded_value);
+            tmpp = modifyCellValue(tmp,encoded_value);
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
         }
         catch (Exception e)
