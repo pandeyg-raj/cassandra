@@ -223,7 +223,16 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 continue;
             }
 
-            tmp = message.payload;
+            if(tmp == null){
+                tmp = message.payload;
+            }
+            else
+            {
+                if( tmp.capacity < (message.payload).capacity)
+                {
+                    tmp = message.payload;
+                }
+            }
             // get the partition iterator corresponding to the
             // current data response
             PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), command.nowInSec());
