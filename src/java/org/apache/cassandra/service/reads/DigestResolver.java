@@ -409,7 +409,14 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
            // logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
             tmpp = modifyCellValue(tmp,encoded_value);
-            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+            try{
+                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                return null;
+            }
         }
         catch (Exception e)
         {
