@@ -321,13 +321,14 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         }
 
+        String encoded_value = "";
         try
         {
             if(!IsEcDeccodeNeeded)
             {
                 // just combine and return
                 //logger.info("Read Returning: All data shartd available ");
-                String encoded_value = "";
+
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
                     encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCode()); //ecResponses[i].getEcCode();
@@ -379,7 +380,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         try
         {
-            String encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
+            encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
 
             //ECConfig.DecodingNeeded++;
             //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
