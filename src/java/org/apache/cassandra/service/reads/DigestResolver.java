@@ -127,8 +127,6 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         // Use a builder to collect the modified partitions
         ReadResponse resp = null;
-
-
         while (partitions.hasNext()) {
             try (RowIterator rows = partitions.next()) {
                 TableMetadata tableMetadata  = rows.metadata();
@@ -170,9 +168,13 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 throw new RuntimeException(e);
             }
         }
-
+        if(resp==null)
+        {
+            logger.error("Problem");
+        }
         // Create a new ReadResponse with modified data
         return resp;
+
     }
 
     public boolean isMyRead()
@@ -409,6 +411,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
            // logger.info("Read Returning: encoded main computer value is "+ encoded_value);
 
             tmpp = modifyCellValue(tmp,encoded_value);
+
             try{
                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
             }
