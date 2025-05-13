@@ -22,7 +22,7 @@ import java.nio.ByteBuffer;
 
 public class ECResponse
 {
-    private String ecCode ; //= new String[ECConfig.TOTAL_SHARDS];
+    private ByteBuffer ecCode;
 
     public ECResponse()
     {
@@ -37,6 +37,10 @@ public class ECResponse
     public void setEcCodeParity(ByteBuffer ecCodeParity)
     {
         this.ecCodeParity = ecCodeParity;
+    }
+    public void setEcCode(ByteBuffer ecCode)
+    {
+        this.ecCode = ecCode;
     }
 
     private ByteBuffer ecCodeParity;
@@ -67,15 +71,12 @@ public class ECResponse
         this.ecCodeIndex = ecCodeIndex;
     }
 
-    public String getEcCode()
+    public ByteBuffer getEcCode()
     {
         return ecCode;
     }
 
-    public void setEcCode(String ecCode)
-    {
-        this.ecCode = ecCode;
-    }
+
 
     public boolean getIsCodeAvailable()
     {

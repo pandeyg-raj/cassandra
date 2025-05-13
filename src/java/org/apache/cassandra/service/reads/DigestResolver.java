@@ -277,7 +277,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             //String value = ByteBufferUtil.string(Finalbuffer);
                             //ecResponses[codeIndex].setEcCode(value);
                             //ecResponses[codeIndex].setCodeLength(value.length());
-                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
+                            ecResponses[codeIndex].setEcCode(Finalbuffer.slice().duplicate());
 
                         }
                         else // parity shard
