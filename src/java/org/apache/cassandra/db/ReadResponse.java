@@ -17,14 +17,17 @@
  */
 package org.apache.cassandra.db;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.google.common.annotations.VisibleForTesting;
 
 import org.apache.cassandra.db.filter.ColumnFilter;
-import org.apache.cassandra.db.partitions.*;
-import org.apache.cassandra.db.rows.*;
+import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
+import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
+import org.apache.cassandra.db.rows.DeserializationHelper;
+import org.apache.cassandra.db.rows.Rows;
+import org.apache.cassandra.db.rows.UnfilteredRowIterator;
 import org.apache.cassandra.io.IVersionedSerializer;
 import org.apache.cassandra.io.util.DataInputBuffer;
 import org.apache.cassandra.io.util.DataInputPlus;
@@ -38,9 +41,10 @@ public abstract class ReadResponse
 {
     // Serializer for single partition read response
     public static final IVersionedSerializer<ReadResponse> serializer = new Serializer();
-
-    protected ReadResponse()
+    public final int capacity;
+    protected ReadResponse(int capacity)
     {
+        this.capacity = capacity;
     }
 
     public static ReadResponse createDataResponse(UnfilteredPartitionIterator data, ReadCommand command, RepairedDataInfo rdi)
@@ -138,7 +142,7 @@ public abstract class ReadResponse
 
         private DigestResponse(ByteBuffer digest)
         {
-            super();
+            super(digest.capacity());
             assert digest.hasRemaining();
             this.digest = digest;
         }
@@ -237,7 +241,7 @@ public abstract class ReadResponse
                                int dataSerializationVersion,
                                DeserializationHelper.Flag flag)
         {
-            super();
+            super(data.capacity());
             this.data = data;
             this.repairedDataDigest = repairedDataDigest;
             this.isRepairedDigestConclusive = isRepairedDigestConclusive;
