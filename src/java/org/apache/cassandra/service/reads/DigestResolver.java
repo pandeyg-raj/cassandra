@@ -357,7 +357,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
             if(ecResponses[i].getIsCodeAvailable())  // code available, set corresponding index
             {
-                if(i < ECConfig.DATA_SHARDSi < ECConfig.DATA_SHARDS)
+                if(i < ECConfig.DATA_SHARDS )
                 {
                     ByteBuffer value = ecResponses[i].getEcCode();
                     value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
