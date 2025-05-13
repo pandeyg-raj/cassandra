@@ -330,7 +330,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 String encoded_value = "";
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
-                    encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCodeParity()); //ecResponses[i].getEcCode();
+                    encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCode()); //ecResponses[i].getEcCode();
 
                     //logger.info("Combining value:  " + encoded_value);
                 }
@@ -357,8 +357,18 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
             if(ecResponses[i].getIsCodeAvailable())  // code available, set corresponding index
             {
-                ByteBuffer value = ecResponses[i].getEcCodeParity();
-                value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
+                if(i < ECConfig.DATA_SHARDSi < ECConfig.DATA_SHARDS)
+                {
+                    ByteBuffer value = ecResponses[i].getEcCode();
+                    value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
+
+                }
+                else
+                {
+                    ByteBuffer value = ecResponses[i].getEcCodeParity();
+                    value.get (decodeMatrix[ecResponses[i].getEcCodeIndex()]) ;// .getBytes(StandardCharsets.UTF_8);
+
+                }
                 //logger.info("decoding length of index "+ ecResponses[i].getEcCodeIndex() + " is " + decodeMatrix[ecResponses[i].getEcCodeIndex()].length);
             }
             else // code not available , allocate empty space
