@@ -347,7 +347,15 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
                 tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
 
-                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+                try
+                {
+                    return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    return null;
+                }
             }
         }
         catch (Exception e)
