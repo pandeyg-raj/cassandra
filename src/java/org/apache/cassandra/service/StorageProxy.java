@@ -1175,7 +1175,7 @@ public class StorageProxy implements StorageProxyMBean
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
                             mutate(signalMutations, consistencyLevel, requestTime);
-                            ECConfig.TotalSignalSent.incrementAndGet();
+                            logger.info(" signal sent " + ECConfig.TotalSignalSent.incrementAndGet());
                             //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
@@ -1242,7 +1242,7 @@ public class StorageProxy implements StorageProxyMBean
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
                 mutate(mutations, consistencyLevel, requestTime);
-                ECConfig.TotalReplicateWriteSent.incrementAndGet();
+                logger.info(" Replicate sent " + ECConfig.TotalReplicateWriteSent.incrementAndGet());
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
                 PriorityThreadPoolUtil.printThreadPollInfo();
