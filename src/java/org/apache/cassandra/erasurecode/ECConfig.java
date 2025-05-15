@@ -55,10 +55,10 @@ public class ECConfig
         long completed = executor.getCompletedTaskCount();
 
         logger.info("=== Thread Pool Status ===\n");
-        logger.info("Active Threads   : %d\n", active);
-        logger.info("Total Pool Size  : %d\n", poolSize);
-        logger.info("Queued Tasks     : %d\n", queued);
-        logger.info("Completed Tasks  : %d\n", completed);
+        logger.info("Active Threads   : " + active);
+        logger.info("Total Pool Size  : " + poolSize);
+        logger.info("Queued Tasks     : " + queued);
+        logger.info("Completed Tasks  : " + completed);
 
         // Monitor logic
         if (active == poolSize && queued > 0) {
