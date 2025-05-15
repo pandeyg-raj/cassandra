@@ -1244,20 +1244,9 @@ public class StorageProxy implements StorageProxyMBean
                 ECConfig.TotalReplicateWriteSent.incrementAndGet();
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
-
+                ECConfig.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
-
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Function to run in the separate thread
-                        //logger.error("Signal Sent count: "+ECConfig.signalCount.getAndIncrement());
-                        sendECSignal(mutations,consistencyLevel, requestTime);
-                    }
-                });
-
-                // Start the thread
-                thread.start();
+                ECConfig.getExecutor().submit(() -> sendECSignal(mutations,consistencyLevel, requestTime));
 
             }
         }
