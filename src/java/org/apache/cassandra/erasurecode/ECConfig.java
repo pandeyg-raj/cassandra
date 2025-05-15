@@ -54,11 +54,11 @@ public class ECConfig
         int queued = executor.getQueue().size();
         long completed = executor.getCompletedTaskCount();
 
-        logger.info("=== Thread Pool Status ===\n");
-        logger.info("Active Threads   : " + active);
-        logger.info("Total Pool Size  : " + poolSize);
-        logger.info("Queued Tasks     : " + queued);
-        logger.info("Completed Tasks  : " + completed);
+        //logger.info("=== Thread Pool Status ===\n");
+        //logger.info("Active Threads   : " + active);
+        //logger.info("Total Pool Size  : " + poolSize);
+        //logger.info("Queued Tasks     : " + queued);
+        //logger.info("Completed Tasks  : " + completed);
 
         // Monitor logic
         if (active == poolSize && queued > 0) {
@@ -70,8 +70,6 @@ public class ECConfig
         } else if (active < poolSize && queued > 0) {
             logger.info("⚠️ Tasks are queued even though threads are idle — potential inefficiency or blocking.");
         }
-
-        logger.info("===========================\n");
     }
 //
 //
