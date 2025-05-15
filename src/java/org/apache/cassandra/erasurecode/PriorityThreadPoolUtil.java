@@ -74,7 +74,8 @@ public class PriorityThreadPoolUtil {
     public static void printThreadPollInfo()
     {
         int active = executor.getActiveCount();
-        int poolSize = executor.getPoolSize();
+        int maxPoolSize = executor.getMaximumPoolSize();
+        int currentPoolSize = executor.getPoolSize();
         int queued = executor.getQueue().size();
         long completed = executor.getCompletedTaskCount();
 
@@ -85,14 +86,14 @@ public class PriorityThreadPoolUtil {
         //logger.info("Completed Tasks  : " + completed);
 
         // Monitor logic
-        if (active == poolSize && queued > 0) {
-            logger.info("🚨 POOL FULL + QUEUE BACKED UP: System is likely saturated or under-provisioned.");
-        } else if (active == poolSize && queued == 0) {
-            logger.info("✅ Pool is fully utilized with no backlog — efficient usage.");
-        } else if (active < poolSize && queued == 0) {
-            logger.info("🟢 Underutilized: Idle threads available and no tasks waiting.");
-        } else if (active < poolSize && queued > 0) {
-            logger.info("⚠️ Tasks are queued even though threads are idle — potential inefficiency or blocking.");
+        if (active == maxPoolSize && queued > 0) {
+            logger.info("🚨 FULLY LOADED: Max threads active, and queue is growing — system saturated.");
+        } else if (active == maxPoolSize && queued == 0) {
+            logger.info("✅ Max threads in use, but queue is empty — high throughput under control.");
+        } else if (active < maxPoolSize && queued == 0) {
+            logger.info("🟢 UNDERUTILIZED: Idle capacity and no waiting tasks.");
+        } else if (active < maxPoolSize && queued > 0) {
+            logger.info("⚠️ Queue building up even with spare threads — potential inefficiency or blocking.");
         }
     }
 }
