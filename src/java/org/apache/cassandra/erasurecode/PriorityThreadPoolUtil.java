@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 public class PriorityThreadPoolUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(PriorityThreadPoolUtil.class);
-    private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(5, Thread.MIN_PRIORITY);
+    private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(8, Thread.MIN_PRIORITY);
 
     public static ExecutorService getExecutor() {
         return executor;
@@ -64,8 +64,8 @@ public class PriorityThreadPoolUtil {
     public static ThreadPoolExecutor createFixedPriorityPool(int poolSize, int priority) {
         return new ThreadPoolExecutor(
         poolSize,                  // core pool size
-        poolSize,                  // max pool size = core (fixed)
-        0L, TimeUnit.MILLISECONDS, // keep alive time
+        poolSize * 2,                  // max pool size = core (fixed)
+        60, TimeUnit.SECONDS, // keep alive time
         new LinkedBlockingQueue<>(), // unbounded queue (or customize)
         new PriorityThreadFactory(priority)
         );
