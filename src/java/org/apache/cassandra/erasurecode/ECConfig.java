@@ -23,9 +23,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
@@ -37,40 +34,7 @@ public class ECConfig
 {
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
     private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
-    private static final ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
 
-    public static ExecutorService getExecutor() {
-        return executor;
-    }
-
-    public static void shutdownExecutor() {
-        executor.shutdown();
-    }
-
-    public static void printThreadPollInfo()
-    {
-        int active = executor.getActiveCount();
-        int poolSize = executor.getPoolSize();
-        int queued = executor.getQueue().size();
-        long completed = executor.getCompletedTaskCount();
-
-        //logger.info("=== Thread Pool Status ===\n");
-        //logger.info("Active Threads   : " + active);
-        //logger.info("Total Pool Size  : " + poolSize);
-        //logger.info("Queued Tasks     : " + queued);
-        //logger.info("Completed Tasks  : " + completed);
-
-        // Monitor logic
-        if (active == poolSize && queued > 0) {
-            logger.info("🚨 POOL FULL + QUEUE BACKED UP: System is likely saturated or under-provisioned.");
-        } else if (active == poolSize && queued == 0) {
-            logger.info("✅ Pool is fully utilized with no backlog — efficient usage.");
-        } else if (active < poolSize && queued == 0) {
-            logger.info("🟢 Underutilized: Idle threads available and no tasks waiting.");
-        } else if (active < poolSize && queued > 0) {
-            logger.info("⚠️ Tasks are queued even though threads are idle — potential inefficiency or blocking.");
-        }
-    }
 //
 //
 //    // raj debug start performance breckdown
