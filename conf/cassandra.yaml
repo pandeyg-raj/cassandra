@@ -1250,7 +1250,7 @@ stream_entire_sstables: true
 # How long the coordinator should wait for read operations to complete.
 # Lowest acceptable value is 10 ms.
 # Min unit: ms
-read_request_timeout: 5000ms
+read_request_timeout: 10000ms
 # How long the coordinator should wait for seq or index scans to complete.
 # Lowest acceptable value is 10 ms.
 # Min unit: ms
@@ -1258,7 +1258,7 @@ range_request_timeout: 10000ms
 # How long the coordinator should wait for writes to complete.
 # Lowest acceptable value is 10 ms.
 # Min unit: ms
-write_request_timeout: 2000ms
+write_request_timeout: 10000ms
 # How long the coordinator should wait for counter writes to complete.
 # Lowest acceptable value is 10 ms.
 # Min unit: ms
@@ -1277,7 +1277,7 @@ truncate_request_timeout: 60000ms
 # The default timeout for other, miscellaneous operations.
 # Lowest acceptable value is 10 ms.
 # Min unit: ms
-request_timeout: 10000ms
+request_timeout: 50000ms
 
 # Defensive settings for protecting Cassandra from true network partitions.
 # See (CASSANDRA-14358) for details.
