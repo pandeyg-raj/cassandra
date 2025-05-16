@@ -1247,8 +1247,15 @@ public class StorageProxy implements StorageProxyMBean
 
                 //PriorityThreadPoolUtil.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
+
                 PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
 
+                /*
+                Thread thread = new Thread(new Runnable() {
+                    @Override
+                 public void run() {sendECSignal(mutations,consistencyLevel, requestTime);}});
+                thread.start();
+                */
             }
         }
     }
