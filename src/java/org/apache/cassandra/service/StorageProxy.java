@@ -1138,7 +1138,7 @@ public class StorageProxy implements StorageProxyMBean
                             //value = ByteBufferUtil.string(cell.buffer());
                             //logger.info("Raj Storage Proxy column is: " + cell.column().name.toString() + " value is " + value);
                             //logger.info("Raj Storage Proxy sending signal mutation for key " + mutation.key().toString());
-                            Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key(),true);
+                            Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key(),"signal");
                            // logger.error("original Mutation:"+mutation);
                             //logger.error("mutationBuilder:"+mutationBuilder);
 

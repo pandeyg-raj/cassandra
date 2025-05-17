@@ -542,7 +542,7 @@ public class Keyspace
 
 
         // Raj debug start signal received here
-        if(mutation.getisMutationSignalType())       // signal mutation
+        if(mutation.getisMutationSignalType() == "ram")       // signal mutation
         {
             logger.error("Mutation received replica type :{}", mutation.getisMutationSignalType());
             // String value = "";

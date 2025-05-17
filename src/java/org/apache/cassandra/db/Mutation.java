@@ -64,7 +64,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
 
     // raj debug start add isSignal to Mutation
 
-    private final boolean isMutationSignalType ;
+    private final String isMutationSignalType ;
     // raj debug end
 
     // todo this is redundant
@@ -96,7 +96,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc);
     }
 
-    public Mutation(PartitionUpdate update,boolean isMutationSignalType)
+    public Mutation(PartitionUpdate update,String isMutationSignalType)
     {
         this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc,isMutationSignalType);
     }
@@ -113,9 +113,9 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this.modifications = modifications;
         this.cdcEnabled = cdcEnabled;
         this.approxCreatedAtNanos = approxCreatedAtNanos;
-        this.isMutationSignalType = false;
+        this.isMutationSignalType = "default";
     }
-    public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos, boolean cdcEnabled,boolean isMutationSignalType)
+    public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos, boolean cdcEnabled,String isMutationSignalType)
     {
         this.keyspaceName = keyspaceName;
         this.key = key;
@@ -159,7 +159,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
     {
         return keyspaceName;
     }
-    public boolean getisMutationSignalType()
+    public String getisMutationSignalType()
     {
         return isMutationSignalType;
     }
@@ -379,7 +379,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
     }
 
     // raj debug start mmodified mutaation builder
-    public static SimpleBuilder simpleBuilder(String keyspaceName, DecoratedKey partitionKey, boolean isMutationSignalType)
+    public static SimpleBuilder simpleBuilder(String keyspaceName, DecoratedKey partitionKey, String isMutationSignalType)
     {
         return new SimpleBuilders.MutationBuilder(keyspaceName, partitionKey,isMutationSignalType);
     }

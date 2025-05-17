@@ -117,16 +117,16 @@ public abstract class SimpleBuilders
     {
         private final String keyspaceName;
         private final DecoratedKey key;
-        private final boolean isMutationSignalType;
+        private final String isMutationSignalType;
         private final Map<TableId, PartitionUpdateBuilder> updateBuilders = new HashMap<>();
 
         public MutationBuilder(String keyspaceName, DecoratedKey key)
         {
             this.keyspaceName = keyspaceName;
             this.key = key;
-            this.isMutationSignalType = false;
+            this.isMutationSignalType = "default";
         }
-        public MutationBuilder(String keyspaceName, DecoratedKey key,boolean isMutationSignalType)
+        public MutationBuilder(String keyspaceName, DecoratedKey key,String isMutationSignalType)
         {
             this.keyspaceName = keyspaceName;
             this.key = key;
