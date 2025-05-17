@@ -542,10 +542,8 @@ public class Keyspace
 
 
         // Raj debug start signal received here
-        if(mutation.getisMutationSignalType() == "ram")       // signal mutation
-        {
-            logger.error("Mutation received replica type :{}", mutation.getisMutationSignalType());
-            // String value = "";
+
+           // String value = "";
             Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
             if (data != null)
             {
@@ -600,7 +598,7 @@ public class Keyspace
                                 {
                                     ECConfig.TotalSignalReceived.incrementAndGet();
                                     //Tracing.trace("EC Signal received at Storage layer");
-                                    //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
+                                    logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
                                     // here read local value and erasure code and write in mutation
                                     TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
@@ -771,7 +769,7 @@ public class Keyspace
             {
                 //logger.info("Null pointer exception");
             }
-        }
+
 
         //Raj debug end
 

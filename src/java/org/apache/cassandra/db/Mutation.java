@@ -62,11 +62,6 @@ public class Mutation implements IMutation, Supplier<Mutation>
 {
     public static final MutationSerializer serializer = new MutationSerializer();
 
-    // raj debug start add isSignal to Mutation
-
-    private final String isMutationSignalType ;
-    // raj debug end
-
     // todo this is redundant
     // when we remove it, also restore SerializationsTest.testMutationRead to not regenerate new Mutations each test
     private final String keyspaceName;
@@ -96,11 +91,6 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc);
     }
 
-    public Mutation(PartitionUpdate update,String isMutationSignalType)
-    {
-        this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc,isMutationSignalType);
-    }
-
     public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos)
     {
         this(keyspaceName, key, modifications, approxCreatedAtNanos, cdcEnabled(modifications.values()));
@@ -113,16 +103,6 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this.modifications = modifications;
         this.cdcEnabled = cdcEnabled;
         this.approxCreatedAtNanos = approxCreatedAtNanos;
-        this.isMutationSignalType = "default";
-    }
-    public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos, boolean cdcEnabled,String isMutationSignalType)
-    {
-        this.keyspaceName = keyspaceName;
-        this.key = key;
-        this.modifications = modifications;
-        this.cdcEnabled = cdcEnabled;
-        this.approxCreatedAtNanos = approxCreatedAtNanos;
-        this.isMutationSignalType = isMutationSignalType;
     }
 
     private static boolean cdcEnabled(Iterable<PartitionUpdate> modifications)
@@ -158,10 +138,6 @@ public class Mutation implements IMutation, Supplier<Mutation>
     public String getKeyspaceName()
     {
         return keyspaceName;
-    }
-    public String getisMutationSignalType()
-    {
-        return isMutationSignalType;
     }
 
     public Collection<TableId> getTableIds()
@@ -377,13 +353,6 @@ public class Mutation implements IMutation, Supplier<Mutation>
     {
         return new SimpleBuilders.MutationBuilder(keyspaceName, partitionKey);
     }
-
-    // raj debug start mmodified mutaation builder
-    public static SimpleBuilder simpleBuilder(String keyspaceName, DecoratedKey partitionKey, String isMutationSignalType)
-    {
-        return new SimpleBuilders.MutationBuilder(keyspaceName, partitionKey,isMutationSignalType);
-    }
-    //raj debug end
 
     /**
      * Interface for building mutations geared towards human.

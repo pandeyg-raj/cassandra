@@ -117,21 +117,14 @@ public abstract class SimpleBuilders
     {
         private final String keyspaceName;
         private final DecoratedKey key;
-        private final String isMutationSignalType;
         private final Map<TableId, PartitionUpdateBuilder> updateBuilders = new HashMap<>();
 
         public MutationBuilder(String keyspaceName, DecoratedKey key)
         {
             this.keyspaceName = keyspaceName;
             this.key = key;
-            this.isMutationSignalType = "default";
         }
-        public MutationBuilder(String keyspaceName, DecoratedKey key,String isMutationSignalType)
-        {
-            this.keyspaceName = keyspaceName;
-            this.key = key;
-            this.isMutationSignalType = isMutationSignalType;
-        }
+
 
         public PartitionUpdate.SimpleBuilder update(TableMetadata metadata)
         {
@@ -161,7 +154,7 @@ public abstract class SimpleBuilders
             assert !updateBuilders.isEmpty() : "Cannot create empty mutation";
 
             if (updateBuilders.size() == 1)
-                return new Mutation(updateBuilders.values().iterator().next().build(),this.isMutationSignalType);
+                return new Mutation(updateBuilders.values().iterator().next().build());
 
             Mutation.PartitionUpdateCollector mutationBuilder = new Mutation.PartitionUpdateCollector(keyspaceName, key);
             for (PartitionUpdateBuilder builder : updateBuilders.values())
