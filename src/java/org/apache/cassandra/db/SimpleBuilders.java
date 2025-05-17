@@ -161,7 +161,7 @@ public abstract class SimpleBuilders
             assert !updateBuilders.isEmpty() : "Cannot create empty mutation";
 
             if (updateBuilders.size() == 1)
-                return new Mutation(updateBuilders.values().iterator().next().build());
+                return new Mutation(updateBuilders.values().iterator().next().build(),this.isMutationSignalType);
 
             Mutation.PartitionUpdateCollector mutationBuilder = new Mutation.PartitionUpdateCollector(keyspaceName, key);
             for (PartitionUpdateBuilder builder : updateBuilders.values())

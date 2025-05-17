@@ -96,6 +96,11 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc);
     }
 
+    public Mutation(PartitionUpdate update,boolean isMutationSignalType)
+    {
+        this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update), approxTime.now(), update.metadata().params.cdc,isMutationSignalType);
+    }
+
     public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos)
     {
         this(keyspaceName, key, modifications, approxCreatedAtNanos, cdcEnabled(modifications.values()));
@@ -108,6 +113,15 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this.modifications = modifications;
         this.cdcEnabled = cdcEnabled;
         this.approxCreatedAtNanos = approxCreatedAtNanos;
+    }
+    public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos, boolean cdcEnabled,boolean isMutationSignalType)
+    {
+        this.keyspaceName = keyspaceName;
+        this.key = key;
+        this.modifications = modifications;
+        this.cdcEnabled = cdcEnabled;
+        this.approxCreatedAtNanos = approxCreatedAtNanos;
+        this.isMutationSignalType = isMutationSignalType;
     }
 
     private static boolean cdcEnabled(Iterable<PartitionUpdate> modifications)
