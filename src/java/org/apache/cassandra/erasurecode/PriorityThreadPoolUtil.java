@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 public class PriorityThreadPoolUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(PriorityThreadPoolUtil.class);
-    private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(16, Thread.MIN_PRIORITY);
+    private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(16, Thread.NORM_PRIORITY);
 
     public static ExecutorService getExecutor() {
         return executor;
