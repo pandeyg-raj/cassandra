@@ -64,7 +64,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
 
     // raj debug start add isSignal to Mutation
 
-    public boolean isMutationSignalType ;
+    private final boolean isMutationSignalType ;
     // raj debug end
 
     // todo this is redundant
@@ -113,6 +113,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
         this.modifications = modifications;
         this.cdcEnabled = cdcEnabled;
         this.approxCreatedAtNanos = approxCreatedAtNanos;
+        this.isMutationSignalType = false;
     }
     public Mutation(String keyspaceName, DecoratedKey key, ImmutableMap<TableId, PartitionUpdate> modifications, long approxCreatedAtNanos, boolean cdcEnabled,boolean isMutationSignalType)
     {
@@ -157,6 +158,10 @@ public class Mutation implements IMutation, Supplier<Mutation>
     public String getKeyspaceName()
     {
         return keyspaceName;
+    }
+    public boolean getisMutationSignalType()
+    {
+        return isMutationSignalType;
     }
 
     public Collection<TableId> getTableIds()
