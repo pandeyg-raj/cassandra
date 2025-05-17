@@ -359,6 +359,13 @@ public class Mutation implements IMutation, Supplier<Mutation>
         return new SimpleBuilders.MutationBuilder(keyspaceName, partitionKey);
     }
 
+    // raj debug start mmodified mutaation builder
+    public static SimpleBuilder simpleBuilder(String keyspaceName, DecoratedKey partitionKey, boolean isMutationSignalType)
+    {
+        return new SimpleBuilders.MutationBuilder(keyspaceName, partitionKey,isMutationSignalType);
+    }
+    //raj debug end
+
     /**
      * Interface for building mutations geared towards human.
      * <p>
