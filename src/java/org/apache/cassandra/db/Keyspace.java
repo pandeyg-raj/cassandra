@@ -598,7 +598,7 @@ public class Keyspace
                                 {
                                     ECConfig.TotalSignalReceived.incrementAndGet();
                                     //Tracing.trace("EC Signal received at Storage layer");
-                                    logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
+                                    //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
                                     // here read local value and erasure code and write in mutation
                                     TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
