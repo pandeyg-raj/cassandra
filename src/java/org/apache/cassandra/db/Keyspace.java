@@ -540,7 +540,7 @@ public class Keyspace
     {
 
 
-
+        logger.error("Mutation received replica type :{}", mutation.getEcMutationType());
         // Raj debug start signal received here
         if(mutation.getEcMutationType() == 2)       // signal mutation
         {
