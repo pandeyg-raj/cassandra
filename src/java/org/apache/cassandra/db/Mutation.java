@@ -64,7 +64,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
 
     // raj debug start add isSignal to Mutation
 
-    public boolean isMutationSignalType = false;
+    public boolean isMutationSignalType ;
     // raj debug end
 
     // todo this is redundant
