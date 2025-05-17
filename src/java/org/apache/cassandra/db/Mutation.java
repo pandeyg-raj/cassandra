@@ -63,21 +63,8 @@ public class Mutation implements IMutation, Supplier<Mutation>
     public static final MutationSerializer serializer = new MutationSerializer();
 
     // raj debug start add isSignal to Mutation
-    // 0 = original write default
-    // 1 = ec write
-    // 2 = ec signal
 
-    public int getEcMutationType()
-    {
-        return ecMutationType;
-    }
-
-    public void setEcMutationType(int ecMutationType)
-    {
-        this.ecMutationType = ecMutationType;
-    }
-
-    private int ecMutationType = 0;
+    public boolean isMutationSignalType = false;
     // raj debug end
 
     // todo this is redundant

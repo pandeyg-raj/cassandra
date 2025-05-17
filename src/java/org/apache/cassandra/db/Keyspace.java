@@ -542,9 +542,9 @@ public class Keyspace
 
 
         // Raj debug start signal received here
-        if(mutation.getEcMutationType() == 2)       // signal mutation
+        if(mutation.isMutationSignalType)       // signal mutation
         {
-            logger.error("Mutation received replica type :{}", mutation.getEcMutationType());
+            logger.error("Mutation received replica type :{}", mutation.isMutationSignalType);
             // String value = "";
             Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
             if (data != null)
