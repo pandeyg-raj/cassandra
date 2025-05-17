@@ -18,7 +18,13 @@
 package org.apache.cassandra.db;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -55,6 +61,24 @@ import static org.apache.cassandra.utils.MonotonicClock.Global.approxTime;
 public class Mutation implements IMutation, Supplier<Mutation>
 {
     public static final MutationSerializer serializer = new MutationSerializer();
+
+    // raj debug start add isSignal to Mutation
+    // 0 = original write default
+    // 1 = ec write
+    // 2 = ec signal
+
+    public int getEcMutationType()
+    {
+        return ecMutationType;
+    }
+
+    public void setEcMutationType(int ecMutationType)
+    {
+        this.ecMutationType = ecMutationType;
+    }
+
+    private int ecMutationType = 0;
+    // raj debug end
 
     // todo this is redundant
     // when we remove it, also restore SerializationsTest.testMutationRead to not regenerate new Mutations each test
