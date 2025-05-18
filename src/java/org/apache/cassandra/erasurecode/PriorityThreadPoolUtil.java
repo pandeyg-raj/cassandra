@@ -17,12 +17,14 @@
  */
 
 package org.apache.cassandra.erasurecode;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +33,7 @@ public class PriorityThreadPoolUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(PriorityThreadPoolUtil.class);
     private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(16, Thread.NORM_PRIORITY);
-
+    public static final LongAdder TimeTakenThreadSpawn = new LongAdder();
     public static ExecutorService getExecutor() {
         return executor;
     }
@@ -65,7 +67,7 @@ public class PriorityThreadPoolUtil {
         return new ThreadPoolExecutor(
         poolSize,                  // core pool size
         poolSize * 5,                  // max pool size = core (fixed)
-        60, TimeUnit.SECONDS, // keep alive time
+        30, TimeUnit.SECONDS, // keep alive time
         new LinkedBlockingQueue<>(), // unbounded queue (or customize)
         new PriorityThreadFactory(priority)
         );
