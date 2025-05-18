@@ -1233,6 +1233,7 @@ public class StorageProxy implements StorageProxyMBean
 
                             //logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
+                            signalMutation.isEcSignalMuattion = true;
                             //logger.error("signalMutation:"+signalMutation);
                             //logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
                             List<Mutation>  signalMutations = new ArrayList<>();
