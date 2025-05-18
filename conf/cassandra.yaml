@@ -522,7 +522,7 @@ key_cache_size: 0MiB
 #
 # Default value is 0, to disable row caching.
 # Min unit: MiB
-row_cache_size: 20480MiB
+row_cache_size: 0MiB
 
 # Duration in seconds after which Cassandra should save the row cache.
 # Caches are saved to saved_caches_directory as specified in this configuration file.
@@ -1043,7 +1043,7 @@ rpc_address:
 # be set to 0.0.0.0. If left blank, this will be set to the value of
 # rpc_address. If rpc_address is set to 0.0.0.0, broadcast_rpc_address must
 # be set.
-broadcast_rpc_address: 10.10.1.2
+#broadcast_rpc_address: 10.10.1.2
 
 # enable or disable keepalive on rpc/native connections
 rpc_keepalive: true
