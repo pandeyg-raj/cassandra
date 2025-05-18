@@ -1251,7 +1251,7 @@ public class StorageProxy implements StorageProxyMBean
                 long start = System.nanoTime();
                 PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
                 TimeTakenThreadSpawn.add(System.nanoTime() - start);
-                logger.error("total sig Time(us):{}", String.format("%.3f", TimeTakenThreadSpawn.sum() / 1000.0));
+                logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
                 /*
                 Thread thread = new Thread(new Runnable() {
