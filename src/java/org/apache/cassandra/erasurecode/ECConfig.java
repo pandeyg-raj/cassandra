@@ -23,7 +23,6 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,12 +71,12 @@ public class ECConfig
 
     public  static int wholeValueFound = 0;
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
-    public  static AtomicInteger TotalSignalReceived ;
-    public  static AtomicInteger TotalReplicateWriteReceived ;
-    public  static AtomicInteger TotalEcWriteReceived ;//    public  static int DecodingNeeded = 0;
-    public  static AtomicInteger TotalSignalSent ;
-    public  static AtomicInteger TotalReplicateWriteSent ;
-    public  static AtomicInteger TotalSignalApplied;
+    //public  static AtomicInteger TotalSignalReceived ;
+    //public  static AtomicInteger TotalReplicateWriteReceived ;
+    //public  static AtomicInteger TotalEcWriteReceived ;//    public  static int DecodingNeeded = 0;
+    //public  static AtomicInteger TotalSignalSent ;
+    //public  static AtomicInteger TotalReplicateWriteSent ;
+    //public  static AtomicInteger TotalSignalApplied;
 
 // --Commented out by Inspection STOP (4/25/25, 9:34 PM)
     //public  static PrintWriter myWriter ;
@@ -117,12 +116,13 @@ public class ECConfig
 
     public static void initECConfig() {
 
-        TotalSignalReceived = new AtomicInteger(0);
-        TotalEcWriteReceived = new AtomicInteger(0);
-        TotalReplicateWriteReceived = new AtomicInteger(0);
-        TotalSignalSent = new AtomicInteger(0);
-        TotalReplicateWriteSent = new AtomicInteger(0);
-        TotalSignalApplied = new AtomicInteger(0);
+        //TotalSignalReceived = new AtomicInteger(0);
+        //TotalEcWriteReceived = new AtomicInteger(0);
+        //TotalReplicateWriteReceived = new AtomicInteger(0);
+        //TotalSignalSent = new AtomicInteger(0);
+        //TotalReplicateWriteSent = new AtomicInteger(0);
+        //TotalSignalApplied = new AtomicInteger(0);
+        logger.error("EC service initializing");
         try {
 
             InputStream inputStream = new FileInputStream(new File("./conf/ECConfig.yaml"));
@@ -140,6 +140,7 @@ public class ECConfig
 
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
+            PriorityThreadPoolUtil.setExecutor(16,Thread.NORM_PRIORITY);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -155,13 +156,18 @@ public class ECConfig
         /* logger.info(" Cache  access Count :" + readCacheTimeC + "Total value: " +readCacheTime + "(ns)\n" +
                     " Memtbl access Count :" + readMemtableTimeC + "Total value: " +readMemtableTime + "(ms)\n" +
                     " sstabl access Count :" + readSSTableTimeC + "Total value: " +readSSTableTime + "(ms)\n") ;
-        */
+
         logger.info(" TotalReplicateWriteSent :" + TotalReplicateWriteSent + "\n" +
                     " TotalSignalSent :" + TotalSignalSent + "\n" +
                     " TotalReplicateWriteReceived :" + TotalReplicateWriteReceived + "\n" +
                     " TotalSignalReceived :" + TotalSignalReceived + "\n" +
                     " TotalSignalApplied :" + TotalSignalApplied + "\n" +
                     " TotalEcWriteReceived :" + TotalEcWriteReceived + "\n") ;
-
+            */
+    }
+    public static void freeECConfig()
+    {
+        PriorityThreadPoolUtil.shutdownExecutor();
+        logger.error("EC service freed");
     }
 }

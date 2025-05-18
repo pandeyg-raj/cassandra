@@ -32,7 +32,11 @@ import org.slf4j.LoggerFactory;
 public class PriorityThreadPoolUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(PriorityThreadPoolUtil.class);
-    private static final ThreadPoolExecutor executor = PriorityThreadPoolUtil.createFixedPriorityPool(16, Thread.NORM_PRIORITY);
+    private static  ThreadPoolExecutor executor ;
+
+    public static void setExecutor(int poolSize, int priority) {
+        executor = PriorityThreadPoolUtil.createFixedPriorityPool(poolSize, priority);
+    }
     public static final LongAdder TimeTakenThreadSpawn = new LongAdder();
     public static ExecutorService getExecutor() {
         return executor;

@@ -158,7 +158,6 @@ import static com.google.common.collect.Iterables.concat;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.cassandra.db.ConsistencyLevel.SERIAL;
-import static org.apache.cassandra.erasurecode.PriorityThreadPoolUtil.TimeTakenThreadSpawn;
 import static org.apache.cassandra.metrics.ClientRequestsMetricsHolder.casReadMetrics;
 import static org.apache.cassandra.metrics.ClientRequestsMetricsHolder.casWriteMetrics;
 import static org.apache.cassandra.metrics.ClientRequestsMetricsHolder.readMetrics;
@@ -969,7 +968,7 @@ public class StorageProxy implements StorageProxyMBean
 
         try
         {
-           logger.error(" signal muation");
+           //logger.error(" signal muation");
            performWrite(mutations.get(0), consistencyLevel, localDataCenter, standardWritePerformer, null, WriteType.SIMPLE, requestTime);
 
         }
@@ -1307,15 +1306,15 @@ public class StorageProxy implements StorageProxyMBean
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
                 mutate(mutations, consistencyLevel, requestTime);
-                logger.error("total rep write:{}", ECConfig.TotalReplicateWriteSent.incrementAndGet());
+                //ECConfig.TotalReplicateWriteSent.incrementAndGet();
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
 
                 //PriorityThreadPoolUtil.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
-                long start = System.nanoTime();
+                //long start = System.nanoTime();
                 PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
-                TimeTakenThreadSpawn.add(System.nanoTime() - start);
-                logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
+                //TimeTakenThreadSpawn.add(System.nanoTime() - start);
+                //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
                 /*
                 Thread thread = new Thread(new Runnable() {
@@ -1745,7 +1744,7 @@ public class StorageProxy implements StorageProxyMBean
                 {
                     // dont care about signal mutation response
                     MessagingService.instance().send(message, destination.endpoint());
-                    ECConfig.TotalSignalSent.incrementAndGet();
+                    //ECConfig.TotalSignalSent.incrementAndGet();
                 }
                 else
                 {

@@ -577,12 +577,12 @@ public class Keyspace
                             if (isECwrite == 1) // write after ecoding, do nothing
                             {
                                 //logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                                ECConfig.TotalEcWriteReceived.incrementAndGet();
+                                //ECConfig.TotalEcWriteReceived.incrementAndGet();
                                 continue;
                             }
                             else if (isECwrite == 0) // original write do nothing
                             {
-                                ECConfig.TotalReplicateWriteReceived.incrementAndGet();
+                                //ECConfig.TotalReplicateWriteReceived.incrementAndGet();
                                 if (cell.buffer().remaining() == 1)
                                 {
                                     logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
@@ -596,7 +596,7 @@ public class Keyspace
                                 String Messagevalue = ByteBufferUtil.string(cell.buffer());
                                 if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
                                 {
-                                    ECConfig.TotalSignalReceived.incrementAndGet();
+                                    //ECConfig.TotalSignalReceived.incrementAndGet();
                                     //Tracing.trace("EC Signal received at Storage layer");
                                     //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
 
@@ -730,7 +730,7 @@ public class Keyspace
                                                 Mutation ECmutation = mutationBuilder.build();
 
                                                 applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
-                                                ECConfig.TotalSignalApplied.incrementAndGet();
+                                                //ECConfig.TotalSignalApplied.incrementAndGet();
 
 
                                                 //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
