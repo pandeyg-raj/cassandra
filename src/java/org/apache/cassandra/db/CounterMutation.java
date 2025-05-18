@@ -69,12 +69,6 @@ public class CounterMutation implements IMutation
 
     private final Mutation mutation;
     private final ConsistencyLevel consistency;
-    private boolean isSignalMutation = false;
-
-    public boolean isSignalMutation()
-    {
-        return isSignalMutation;
-    }
     public CounterMutation(Mutation mutation, ConsistencyLevel consistency)
     {
         this.mutation = mutation;

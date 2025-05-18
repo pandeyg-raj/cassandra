@@ -29,7 +29,6 @@ import org.apache.cassandra.service.ClientState;
 public interface IMutation
 {
     long MAX_MUTATION_SIZE = DatabaseDescriptor.getMaxMutationSize();
-    boolean isSignalMutation();
     void apply();
     String getKeyspaceName();
     Collection<TableId> getTableIds();
