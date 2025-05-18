@@ -83,6 +83,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewUtils;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.CasWriteTimeoutException;
 import org.apache.cassandra.exceptions.CasWriteUnknownResultException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -960,6 +961,69 @@ public class StorageProxy implements StorageProxyMBean
         }
     }
 
+    public static void mutateEcSignal(List<? extends IMutation> mutations, ConsistencyLevel consistencyLevel, Dispatcher.RequestTime requestTime)
+    throws UnavailableException, OverloadedException, WriteTimeoutException, WriteFailureException
+    {
+        Tracing.trace("Determining replicas for mutation");
+        final String localDataCenter = DatabaseDescriptor.getEndpointSnitch().getLocalDatacenter();
+
+        try
+        {
+           logger.error(" signal muation");
+           performWrite(mutations.get(0), consistencyLevel, localDataCenter, standardWritePerformer, null, WriteType.SIMPLE, requestTime);
+
+        }
+        catch (WriteTimeoutException|WriteFailureException ex)
+        {
+            if (consistencyLevel == ConsistencyLevel.ANY)
+            {
+                hintMutations(mutations);
+            }
+            else
+            {
+                if (ex instanceof WriteFailureException)
+                {
+                    writeMetrics.failures.mark();
+                    writeMetricsForLevel(consistencyLevel).failures.mark();
+                    WriteFailureException fe = (WriteFailureException)ex;
+                    Tracing.trace("Write failure; received {} of {} required replies, failed {} requests",
+                                  fe.received, fe.blockFor, fe.failureReasonByEndpoint.size());
+                }
+                else
+                {
+                    writeMetrics.timeouts.mark();
+                    writeMetricsForLevel(consistencyLevel).timeouts.mark();
+                    WriteTimeoutException te = (WriteTimeoutException)ex;
+                    Tracing.trace("Write timeout; received {} of {} required replies", te.received, te.blockFor);
+                }
+                throw ex;
+            }
+        }
+        catch (UnavailableException e)
+        {
+            writeMetrics.unavailables.mark();
+            writeMetricsForLevel(consistencyLevel).unavailables.mark();
+            Tracing.trace("Unavailable");
+            throw e;
+        }
+        catch (OverloadedException e)
+        {
+            writeMetrics.unavailables.mark();
+            writeMetricsForLevel(consistencyLevel).unavailables.mark();
+            Tracing.trace("Overloaded");
+            throw e;
+        }
+        finally
+        {
+            // We track latency based on request processing time, since the amount of time that request spends in the queue
+            // is not a representative metric of replica performance.
+            long latency = nanoTime() - requestTime.startedAtNanos();
+            writeMetrics.addNano(latency);
+            writeMetricsForLevel(consistencyLevel).addNano(latency);
+            updateCoordinatorWriteLatencyTableMetric(mutations, latency);
+        }
+    }
+
     /**
      * Hint all the mutations (except counters, which can't be safely retried).  This means
      * we'll re-hint any successful ones; doesn't seem worth it to track individual success
@@ -1174,7 +1238,7 @@ public class StorageProxy implements StorageProxyMBean
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
-                            mutate(signalMutations, consistencyLevel, requestTime);
+                            mutateEcSignal(signalMutations, consistencyLevel, requestTime);
                             ECConfig.TotalSignalSent.incrementAndGet();
                             //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
@@ -1248,16 +1312,16 @@ public class StorageProxy implements StorageProxyMBean
                 //PriorityThreadPoolUtil.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
                 long start = System.nanoTime();
-                //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
+                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
+                TimeTakenThreadSpawn.add(System.nanoTime() - start);
+                logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
-
-
+                /*
                 Thread thread = new Thread(new Runnable() {
                     @Override
                  public void run() {sendECSignal(mutations,consistencyLevel, requestTime);}});
                 thread.start();
-                TimeTakenThreadSpawn.add(System.nanoTime() - start);
-                logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
+                */
             }
         }
     }

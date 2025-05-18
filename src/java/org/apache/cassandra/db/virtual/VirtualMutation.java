@@ -42,7 +42,12 @@ public final class VirtualMutation implements IMutation
     private final String keyspaceName;
     private final DecoratedKey partitionKey;
     private final ImmutableMap<TableId, PartitionUpdate> modifications;
+    private boolean isSignalMutation = false;
 
+    public boolean isSignalMutation()
+    {
+        return isSignalMutation;
+    }
     public VirtualMutation(PartitionUpdate update)
     {
         this(update.metadata().keyspace, update.partitionKey(), ImmutableMap.of(update.metadata().id, update));
