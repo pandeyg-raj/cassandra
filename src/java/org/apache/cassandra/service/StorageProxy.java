@@ -1240,7 +1240,7 @@ public class StorageProxy implements StorageProxyMBean
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
                             mutateEcSignal(signalMutations, consistencyLevel, requestTime);
-                            ECConfig.TotalSignalSent.incrementAndGet();
+
                             //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
@@ -1740,7 +1740,18 @@ public class StorageProxy implements StorageProxyMBean
         if (localDc != null)
         {
             for (Replica destination : localDc)
-                MessagingService.instance().sendWriteWithCallback(message, destination, responseHandler);
+            {
+                if(mutation.isEcSignalMuattion)
+                {
+                    // dont care about signal mutation response
+                    MessagingService.instance().send(message, destination.endpoint());
+                    ECConfig.TotalSignalSent.incrementAndGet();
+                }
+                else
+                {
+                    MessagingService.instance().sendWriteWithCallback(message, destination, responseHandler);
+                }
+            }
         }
         if (dcGroups != null)
         {
