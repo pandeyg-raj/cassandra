@@ -83,6 +83,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewUtils;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.CasWriteTimeoutException;
 import org.apache.cassandra.exceptions.CasWriteUnknownResultException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -1178,7 +1179,7 @@ public class StorageProxy implements StorageProxyMBean
         }
     }
 
-    public static void sendECSignal(List<? extends IMutation> mutations,
+    public static void  sendECSignal(List<? extends IMutation> mutations,
                                     ConsistencyLevel consistencyLevel,
                                     Dispatcher.RequestTime requestTime)
     {
@@ -1311,7 +1312,7 @@ public class StorageProxy implements StorageProxyMBean
                 //PriorityThreadPoolUtil.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
                 //long start = System.nanoTime();
-                //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
+                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
                 //TimeTakenThreadSpawn.add(System.nanoTime() - start);
                 //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
