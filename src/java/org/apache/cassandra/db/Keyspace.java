@@ -56,6 +56,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.index.SecondaryIndexManager;
@@ -539,240 +540,13 @@ public class Keyspace
                                                Promise<?> future)
     {
 
+        if(IsRMWSignalMutation(mutation))
+        {
+            PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
+             updateIndexes, isDroppable,isDeferrable, future));
+            return future;
 
-
-        // Raj debug start signal received here
-
-           // String value = "";
-            Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
-            if (data != null)
-            {
-                for (Cell cell : data.cells())
-                {
-                /*
-                try{
-
-                    if (cell.column().name.toString().equals("id"))
-                    {
-                        logger.error( "Mutation received at storage id" + ByteBufferUtil.string(cell.buffer()));
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new RuntimeException(e);
-                }
-                */
-                    //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
-                    if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
-                    {
-                        //Tracing.trace("receive request for data");
-                        //logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
-
-                        try
-                        {
-                            //logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                            byte isECwrite = cell.buffer().get();
-                            cell.buffer().rewind();
-                            //logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                            if (isECwrite == 1) // write after ecoding, do nothing
-                            {
-                                //logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
-                                //ECConfig.TotalEcWriteReceived.incrementAndGet();
-                                continue;
-                            }
-                            else if (isECwrite == 0) // original write do nothing
-                            {
-                                //ECConfig.TotalReplicateWriteReceived.incrementAndGet();
-                                if (cell.buffer().remaining() == 1)
-                                {
-                                    logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
-                                }
-                                cell.buffer().rewind();
-                                continue;
-                            }
-                            else if (isECwrite == 115)
-                            {
-                                // double check
-                                String Messagevalue = ByteBufferUtil.string(cell.buffer());
-                                if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
-                                {
-                                    //ECConfig.TotalSignalReceived.incrementAndGet();
-                                    //Tracing.trace("EC Signal received at Storage layer");
-                                    //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
-
-                                    // here read local value and erasure code and write in mutation
-                                    TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
-
-                                    SinglePartitionReadCommand localRead =
-                                    SinglePartitionReadCommand.fullPartitionRead(tableMetadata,
-                                                                                 FBUtilities.nowInSeconds(),
-                                                                                 mutation.key());
-
-                                    try (ReadExecutionController executionController = localRead.executionController();
-                                         UnfilteredPartitionIterator iterator = localRead.executeLocally(executionController))
-                                    {
-                                        // first we have to transform it into a PartitionIterator
-                                        PartitionIterator pi = UnfilteredPartitionIterators.filter(iterator, localRead.nowInSec());
-                                        while (pi.hasNext())
-                                        {
-                                            RowIterator ri = pi.next();
-                                            while (ri.hasNext())
-                                            {
-                                                Row r = ri.next();
-
-                                                ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
-                                                Cell c = r.getCell(colMeta);
-
-
-                                                //long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
-                                                long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
-
-
-                                                if (c.timestamp() != current_timestamp) // not the right value to erasure code
-                                                {
-                                                    continue; // or break?
-                                                }
-
-                                                byte firstByte = c.buffer().get();
-
-                                                if (firstByte != 0) // replicated data first byte shoul be zero
-                                                {
-                                                    assert false;
-                                                }
-
-
-                                                String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
-                                            /*
-                                            if(local_value.length() == 0)
-                                            {
-                                                c.buffer().rewind();
-                                                logger.info("position rewind "+ c.buffer().position());
-                                                logger.info("voila"+ c.buffer().remaining());
-                                            }
-
-
-                                            if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
-                                            {
-                                                logger.info("Probelm value is:"+local_value + "tid" +Thread.currentThread().getId());
-                                                assert true == false;
-                                            }
-                                            */
-
-
-                                                // get the code index from ip address
-                                                String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
-
-                                                String[] SigTocken = Messagevalue.split(",");
-                                                //SigTocken[0] is = "signal"
-                                                int n = Integer.parseInt(SigTocken[1]);
-                                                int k = Integer.parseInt(SigTocken[2]);
-                                                int TotalServer = Integer.parseInt(SigTocken[3]);
-                                                int codeIndex = -1;
-
-                                                for (int i = 0; i < TotalServer; i++)
-                                                {
-                                                    if (myLocalIP.equals(SigTocken[4 + i].substring(0, SigTocken[4 + i].indexOf(":"))))
-                                                    {
-                                                        codeIndex = Integer.parseInt(SigTocken[4 + i].substring(SigTocken[4 + i].indexOf(":") + 1, SigTocken[4 + i].length()));
-                                                    }
-                                                }
-                                                if (codeIndex == -1)
-                                                {
-                                                    assert true == false;
-                                                }
-                                                //logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
-
-
-                                                byte isEC = 1;
-                                                // finish encode data
-                                                byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
-
-                                                //Tracing.trace("ECing value {} Storage layer",local_value);
-
-                                                // find code index corresponding to ip
-
-                                                //String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
-                                                int coded_valueLength = encodeMatrix[codeIndex].length;
-
-                                                ByteBuffer Finalbuffer = ByteBuffer.allocate((1 + (4 * 4)) + coded_valueLength);
-                                                Finalbuffer.put(isEC);
-                                                Finalbuffer.putInt(n);
-                                                Finalbuffer.putInt(k);
-                                                Finalbuffer.putInt(codeIndex);
-                                                Finalbuffer.putInt(coded_valueLength);
-                                                Finalbuffer.put(encodeMatrix[codeIndex]);
-                                                Finalbuffer.flip();
-
-                                                //logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
-
-                                                //Tracing.trace("ECed new value {} Storage layer",coded_value);
-                                                // here updated value should be Erasure code part based on server
-
-                                                //String coded_value = local_value.substring(0,local_value.length()/2);
-                                                //logger.info("writin coded value at index " + codeIndex);
-                                                //logger.info("writin coded value " + coded_value + "original " + local_value);
-
-                                                Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
-                                                //logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
-                                                //
-                                            /*Finalbuffer.rewind();
-                                            if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
-                                            {
-                                                logger.info("Problem bytebufffer tid:"+Thread.currentThread().getId());
-
-                                                assert true == false;
-
-                                            }
-                                            Finalbuffer.rewind();
-
-                                             */
-                                                mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
-                                                Mutation ECmutation = mutationBuilder.build();
-
-                                                applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
-                                                //ECConfig.TotalSignalApplied.incrementAndGet();
-
-
-                                                //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
-                                                // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
-                                                // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
-                                                return future;
-                                            }
-                                        }
-                                    }
-
-                                    //Tracing.trace("local reading for EC Storage layer");
-                                }
-                                else
-                                {
-                                    logger.error("Interesting case: " + ByteBufferUtil.string(cell.buffer()));
-                                    assert true == false;
-                                }
-                            }
-                            else // this should never happen
-                            {
-                                logger.error("Not possibel: " + ByteBufferUtil.string(cell.buffer()));
-                                assert true == false;
-                                continue;
-                            }
-                        }
-                        catch (IOException e)
-                        {
-                            logger.error(" Mutation  Exception for data with length" + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
-
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-            else
-            {
-                //logger.info("Null pointer exception");
-            }
-
-
-        //Raj debug end
-
+        }
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
@@ -916,6 +690,315 @@ public class Keyspace
                         lock.unlock();
             }
         }
+    }
+
+    public void applySignalRMW(final Mutation mutation,
+                               final boolean makeDurable,
+                               boolean updateIndexes,
+                               boolean isDroppable,
+                               boolean isDeferrable,
+                               Promise<?> future)
+    {
+        // Raj debug start signal received here
+
+        // String value = "";
+        Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
+        if (data != null)
+        {
+            for (Cell cell : data.cells())
+            {
+                /*
+                try{
+
+                    if (cell.column().name.toString().equals("id"))
+                    {
+                        logger.error( "Mutation received at storage id" + ByteBufferUtil.string(cell.buffer()));
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+                */
+                //logger.info("Raj KeySpace applying mutation with inffo Current key is " + mutation.key().toString());
+                if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
+                {
+                    //Tracing.trace("receive request for data");
+                    //logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+
+                    try
+                    {
+                        //logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        byte isECwrite = cell.buffer().get();
+                        cell.buffer().rewind();
+                        //logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        if (isECwrite == 1) // write after ecoding, do nothing
+                        {
+                            //logger.error("Mutation for erasure code write (2nd phase) start pos: " + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                            //ECConfig.TotalEcWriteReceived.incrementAndGet();
+                            continue;
+                        }
+                        else if (isECwrite == 0) // original write do nothing
+                        {
+                            //ECConfig.TotalReplicateWriteReceived.incrementAndGet();
+                            if (cell.buffer().remaining() == 1)
+                            {
+                                logger.error("Mutation for Original write (1st phase) start pos: " + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
+                            }
+                            cell.buffer().rewind();
+                            continue;
+                        }
+                        else if (isECwrite == 115)
+                        {
+                            // double check
+                            String Messagevalue = ByteBufferUtil.string(cell.buffer());
+                            if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
+                            {
+                                //ECConfig.TotalSignalReceived.incrementAndGet();
+                                //Tracing.trace("EC Signal received at Storage layer");
+                                //logger.error("Mutation is EC Signal (#" + ECConfig.TotalSignalReceived + ")received at Storage layer for column: " + cell.column().name.toString()+ "thread "+ Thread.currentThread().getId());
+
+                                // here read local value and erasure code and write in mutation
+                                TableMetadata tableMetadata = mutation.getPartitionUpdates().iterator().next().metadata();
+
+                                SinglePartitionReadCommand localRead =
+                                SinglePartitionReadCommand.fullPartitionRead(tableMetadata,
+                                                                             FBUtilities.nowInSeconds(),
+                                                                             mutation.key());
+
+                                try (ReadExecutionController executionController = localRead.executionController();
+                                     UnfilteredPartitionIterator iterator = localRead.executeLocally(executionController))
+                                {
+                                    // first we have to transform it into a PartitionIterator
+                                    PartitionIterator pi = UnfilteredPartitionIterators.filter(iterator, localRead.nowInSec());
+                                    while (pi.hasNext())
+                                    {
+                                        RowIterator ri = pi.next();
+                                        while (ri.hasNext())
+                                        {
+                                            Row r = ri.next();
+
+                                            ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+                                            Cell c = r.getCell(colMeta);
+
+
+                                            //long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
+                                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
+
+
+                                            if (c.timestamp() != current_timestamp) // not the right value to erasure code
+                                            {
+                                                continue; // or break?
+                                            }
+
+                                            byte firstByte = c.buffer().get();
+
+                                            if (firstByte != 0) // replicated data first byte shoul be zero
+                                            {
+                                                assert false;
+                                            }
+
+
+                                            String local_value = ByteBufferUtil.string(c.buffer()); // value read from local
+                                            /*
+                                            if(local_value.length() == 0)
+                                            {
+                                                c.buffer().rewind();
+                                                logger.info("position rewind "+ c.buffer().position());
+                                                logger.info("voila"+ c.buffer().remaining());
+                                            }
+
+
+                                            if ("signal".equals(local_value.substring(0, Math.min(local_value.length(), 6))))
+                                            {
+                                                logger.info("Probelm value is:"+local_value + "tid" +Thread.currentThread().getId());
+                                                assert true == false;
+                                            }
+                                            */
+
+
+                                            // get the code index from ip address
+                                            String myLocalIP = FBUtilities.getJustLocalAddress().getHostAddress();
+
+                                            String[] SigTocken = Messagevalue.split(",");
+                                            //SigTocken[0] is = "signal"
+                                            int n = Integer.parseInt(SigTocken[1]);
+                                            int k = Integer.parseInt(SigTocken[2]);
+                                            int TotalServer = Integer.parseInt(SigTocken[3]);
+                                            int codeIndex = -1;
+
+                                            for (int i = 0; i < TotalServer; i++)
+                                            {
+                                                if (myLocalIP.equals(SigTocken[4 + i].substring(0, SigTocken[4 + i].indexOf(":"))))
+                                                {
+                                                    codeIndex = Integer.parseInt(SigTocken[4 + i].substring(SigTocken[4 + i].indexOf(":") + 1, SigTocken[4 + i].length()));
+                                                }
+                                            }
+                                            if (codeIndex == -1)
+                                            {
+                                                assert true == false;
+                                            }
+                                            //logger.error("3 TIMESTAMP local value"+c.timestamp()+" Storage layer signal value n: "+n+ " k: "+ k + " codeIndex: " +codeIndex + "local value length " +local_value.length()+ "or " + c.buffer().remaining()+" thread "+ Thread.currentThread().getId());
+
+
+                                            byte isEC = 1;
+                                            // finish encode data
+                                            byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
+
+                                            //Tracing.trace("ECing value {} Storage layer",local_value);
+
+                                            // find code index corresponding to ip
+
+                                            //String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
+                                            int coded_valueLength = encodeMatrix[codeIndex].length;
+
+                                            ByteBuffer Finalbuffer = ByteBuffer.allocate((1 + (4 * 4)) + coded_valueLength);
+                                            Finalbuffer.put(isEC);
+                                            Finalbuffer.putInt(n);
+                                            Finalbuffer.putInt(k);
+                                            Finalbuffer.putInt(codeIndex);
+                                            Finalbuffer.putInt(coded_valueLength);
+                                            Finalbuffer.put(encodeMatrix[codeIndex]);
+                                            Finalbuffer.flip();
+
+                                            //logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
+
+                                            //Tracing.trace("ECed new value {} Storage layer",coded_value);
+                                            // here updated value should be Erasure code part based on server
+
+                                            //String coded_value = local_value.substring(0,local_value.length()/2);
+                                            //logger.info("writin coded value at index " + codeIndex);
+                                            //logger.info("writin coded value " + coded_value + "original " + local_value);
+
+                                            Mutation.SimpleBuilder mutationBuilder = Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                                            //logger.error("TIMESTAMP OF Mutation signal"+current_timestamp);
+                                            //
+                                            /*Finalbuffer.rewind();
+                                            if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                                            {
+                                                logger.info("Problem bytebufffer tid:"+Thread.currentThread().getId());
+
+                                                assert true == false;
+
+                                            }
+                                            Finalbuffer.rewind();
+
+                                             */
+                                            mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
+                                            Mutation ECmutation = mutationBuilder.build();
+
+                                            ECmutation.apply();
+                                            future.setSuccess(null);
+                                            //applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
+                                            //ECConfig.TotalSignalApplied.incrementAndGet();
+
+
+                                            //logger.error("5 Storage layer , signal mutation applied "+ Thread.currentThread().getId() );
+                                            // logger.info("Raj  Storage Proxy , ECoded value written.    original value:" + local_value);
+                                            // logger.info("Raj  Storage Proxy , ECoded value written. new (coded) value:" + coded_value);
+
+                                        }
+                                    }
+                                }
+
+                                //Tracing.trace("local reading for EC Storage layer");
+                            }
+                            else
+                            {
+                                logger.error("Interesting case: " + ByteBufferUtil.string(cell.buffer()));
+                                assert true == false;
+                            }
+                        }
+                        else // this should never happen
+                        {
+                            logger.error("Not possibel: " + ByteBufferUtil.string(cell.buffer()));
+                            assert true == false;
+                            continue;
+                        }
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error(" Mutation  Exception for data with length" + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
+                        future.setFailure(e);
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        else
+        {
+            //logger.info("Null pointer exception");
+        }
+
+        //Raj debug end
+
+    }
+
+    public boolean IsRMWSignalMutation(final Mutation mutation)
+    {
+
+        Row data = mutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY);
+        if (data != null)
+        {
+            for (Cell cell : data.cells())
+            {
+                if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
+                {
+                    //Tracing.trace("receive request for data");
+                    //logger.error( "1 Mutation received at storage node for data with length"+cell.buffer().remaining()+" thread  "+ Thread.currentThread().getId());
+
+                    try
+                    {
+                        //logger.error("Before  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        byte isECwrite = cell.buffer().get();
+                        cell.buffer().rewind();
+                        //logger.error("after  reading bytebuffer current loc" + cell.buffer().position()+" thread  "+ Thread.currentThread().getId());
+                        if (isECwrite == 1) // write after ecoding, do nothing
+                        {
+                            cell.buffer().rewind();
+                            return false;
+                        }
+                        else if (isECwrite == 0) // original write do nothing
+                        {
+                            cell.buffer().rewind();
+                            return false;
+                        }
+                        else if (isECwrite == 115)
+                        {
+                            // double check
+                            String Messagevalue = ByteBufferUtil.string(cell.buffer());
+                            if ("signal".equals(Messagevalue.substring(0, Math.min(Messagevalue.length(), 6))))
+                            {
+                                cell.buffer().rewind();
+                                return true;
+                            }
+                            else
+                            {
+                                logger.error("Interesting case: " + ByteBufferUtil.string(cell.buffer()));
+                                assert true == false;
+                            }
+                        }
+                        else // this should never happen
+                        {
+                            logger.error("Not possibel: " + ByteBufferUtil.string(cell.buffer()));
+                            assert true == false;
+                            continue;
+                        }
+                    }
+                    catch (IOException e)
+                    {
+                        logger.error(" Mutation  Exception for data with length" + cell.buffer().remaining() + " thread  " + Thread.currentThread().getId());
+
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+        else
+        {
+            //logger.info("Null pointer exception");
+        }
+        return false;
     }
 
     public AbstractReplicationStrategy getReplicationStrategy()
