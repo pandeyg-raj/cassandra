@@ -56,7 +56,6 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ErasureCode;
-import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.index.SecondaryIndexManager;
@@ -542,9 +541,9 @@ public class Keyspace
 
         if(IsRMWSignalMutation(mutation))
         {
-            PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
-             updateIndexes, isDroppable,isDeferrable, future));
-            return future;
+            //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
+            // updateIndexes, isDroppable,isDeferrable, future));
+            return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
 
         }
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
@@ -692,7 +691,7 @@ public class Keyspace
         }
     }
 
-    public void applySignalRMW(final Mutation mutation,
+    public Future<?> applySignalRMW(final Mutation mutation,
                                final boolean makeDurable,
                                boolean updateIndexes,
                                boolean isDroppable,
@@ -887,8 +886,10 @@ public class Keyspace
                                             mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                             Mutation ECmutation = mutationBuilder.build();
 
-                                            ECmutation.apply();
-                                            future.setSuccess(null);
+                                            Stage.MUTATION.execute(() ->
+                                                                   applyInternal(ECmutation, makeDurable, true, isDroppable, true, future)
+                                            );
+                                            return future;
                                             //applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
                                             //ECConfig.TotalSignalApplied.incrementAndGet();
 
@@ -931,6 +932,7 @@ public class Keyspace
         }
 
         //Raj debug end
+        return future;
 
     }
 
