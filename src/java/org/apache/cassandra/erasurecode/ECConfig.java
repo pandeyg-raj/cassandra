@@ -140,7 +140,7 @@ public class ECConfig
 
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
-            PriorityThreadPoolUtil.setExecutor(16,Thread.NORM_PRIORITY);
+            PriorityThreadPoolUtil.setExecutor(32,Thread.NORM_PRIORITY);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

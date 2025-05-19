@@ -1238,8 +1238,8 @@ public class StorageProxy implements StorageProxyMBean
                             List<Mutation>  signalMutations = new ArrayList<>();
                             signalMutations.add(signalMutation);
                             //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
-                            //mutateEcSignal(signalMutations, consistencyLevel, requestTime);
-                            mutate(signalMutations, consistencyLevel, requestTime);
+                            mutateEcSignal(signalMutations, consistencyLevel, requestTime);
+                            //mutate(signalMutations, consistencyLevel, requestTime);
                             //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
