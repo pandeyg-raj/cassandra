@@ -2296,6 +2296,10 @@ public class StorageProxy implements StorageProxyMBean
         for (int i=0; i<cmdCount; i++)
         {
             //logger.info("Raj storage proxy incoming new Read for keyspace: "+ commands.get(i).metadata().keyspace);
+            if(commands.get(i).metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)) !=null)
+            {
+                consistencyLevel = ConsistencyLevel.QUORUM;
+            }
             reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
                                                             consistencyLevel,
                                                             requestTime);
