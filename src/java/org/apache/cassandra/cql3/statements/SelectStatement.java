@@ -374,12 +374,12 @@ public class SelectStatement implements CQLStatement.SingleKeyspaceCqlStatement
         }
 
         ReadQuery query = getQuery(options, state.getClientState(), selectors.getColumnFilter(), nowInSec, limit);
-
+        // raj debug
         if(this.getBindVariables().get(0).toString().equals(ECConfig.EC_COLUMN) && options.getConsistency() != ConsistencyLevel.QUORUM)
         {
             logger.info("problem");
         }
-
+        //raj debbugg end
         if (options.isReadThresholdsEnabled())
             query.trackWarnings();
         ResultMessage.Rows rows;
