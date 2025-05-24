@@ -1305,6 +1305,11 @@ public class StorageProxy implements StorageProxyMBean
 
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
+                if( (!mutations.isEmpty()) && ( mutations.get(0).getPartitionUpdates().iterator().next().metadata().getColumn(ByteBufferUtil.bytes("field0")) != null))
+                {
+                    consistencyLevel = ConsistencyLevel.QUORUM;
+                }
+
                 mutate(mutations, consistencyLevel, requestTime);
                 //ECConfig.TotalReplicateWriteSent.incrementAndGet();
                 //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
