@@ -1305,7 +1305,7 @@ public class StorageProxy implements StorageProxyMBean
 
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
-                if( (!mutations.isEmpty()) && ( mutations.get(0).getPartitionUpdates().iterator().next().metadata().getColumn(ByteBufferUtil.bytes("field0")) != null))
+                if( (!mutations.isEmpty()) && ( mutations.get(0).getPartitionUpdates().iterator().next().metadata().getColumn(ByteBufferUtil.bytes("field0")) != null) && (consistencyLevel != ConsistencyLevel.ALL))
                 {
                     consistencyLevel = ConsistencyLevel.QUORUM;
                 }
@@ -1317,7 +1317,9 @@ public class StorageProxy implements StorageProxyMBean
                 //PriorityThreadPoolUtil.printThreadPollInfo();
                 //sendECSignal(mutations,consistencyLevel, requestTime);
                 //long start = System.nanoTime();
-                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, consistencyLevel, requestTime));
+
+                ConsistencyLevel finalConsistencyLevel = consistencyLevel;
+                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
                 //TimeTakenThreadSpawn.add(System.nanoTime() - start);
                 //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
