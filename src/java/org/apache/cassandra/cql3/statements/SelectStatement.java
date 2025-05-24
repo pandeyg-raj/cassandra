@@ -375,7 +375,7 @@ public class SelectStatement implements CQLStatement.SingleKeyspaceCqlStatement
 
         ReadQuery query = getQuery(options, state.getClientState(), selectors.getColumnFilter(), nowInSec, limit);
         // raj debug
-        if(this.getBindVariables().get(0).toString().equals(ECConfig.EC_COLUMN) && options.getConsistency() != ConsistencyLevel.QUORUM)
+        if( (!this.getBindVariables().isEmpty()) && this.getBindVariables().get(0).toString().equals(ECConfig.EC_COLUMN) && options.getConsistency() != ConsistencyLevel.QUORUM)
         {
             logger.info("problem");
         }
