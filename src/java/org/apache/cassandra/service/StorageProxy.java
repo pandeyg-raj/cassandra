@@ -2287,6 +2287,7 @@ public class StorageProxy implements StorageProxyMBean
     throws UnavailableException, ReadFailureException, ReadTimeoutException
     {
 
+
         int cmdCount = commands.size();
 
         AbstractReadExecutor[] reads = new AbstractReadExecutor[cmdCount];
@@ -2296,14 +2297,16 @@ public class StorageProxy implements StorageProxyMBean
         for (int i=0; i<cmdCount; i++)
         {
             //logger.info("Raj storage proxy incoming new Read for keyspace: "+ commands.get(i).metadata().keyspace);
-            if(commands.get(i).metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)) !=null)
-            {
-                consistencyLevel = ConsistencyLevel.QUORUM;
-            }
-            reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
-                                                            consistencyLevel,
-                                                            requestTime);
+            //raj debug
+           // if(commands.get(i).metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)) !=null)
+           // {
+            //    consistencyLevel = ConsistencyLevel.QUORUM;
+           // }
 
+            reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
+                                                            ConsistencyLevel.QUORUM,
+                                                            requestTime);
+            //raj debug end
             if (reads[i].hasLocalRead())
                 readMetrics.localRequests.mark();
             else
