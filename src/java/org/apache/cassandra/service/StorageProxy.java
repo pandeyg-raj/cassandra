@@ -1152,7 +1152,14 @@ public class StorageProxy implements StorageProxyMBean
             if (mutateAtomically || updatesView)
                 mutateAtomically((Collection<Mutation>) mutations, consistencyLevel, updatesView, requestTime);
             else
+            {
+                if( (!mutations.isEmpty()) && ( mutations.get(0).getPartitionUpdates().iterator().next().metadata().getColumn(ByteBufferUtil.bytes("field0")) != null))
+                {
+                    consistencyLevel = ConsistencyLevel.QUORUM;
+                }
+
                 mutate(mutations, consistencyLevel, requestTime);
+            }
         }
     }
 
