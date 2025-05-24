@@ -100,6 +100,7 @@ import org.apache.cassandra.db.rows.Row;
 import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.View;
 import org.apache.cassandra.dht.AbstractBounds;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.ReadSizeAbortException;
 import org.apache.cassandra.exceptions.RequestExecutionException;
@@ -374,7 +375,7 @@ public class SelectStatement implements CQLStatement.SingleKeyspaceCqlStatement
 
         ReadQuery query = getQuery(options, state.getClientState(), selectors.getColumnFilter(), nowInSec, limit);
 
-        if(options.getConsistency() != ConsistencyLevel.QUORUM)
+        if(this.getBindVariables().get(0).toString().equals(ECConfig.EC_COLUMN) && options.getConsistency() != ConsistencyLevel.QUORUM)
         {
             logger.info("problem");
         }
