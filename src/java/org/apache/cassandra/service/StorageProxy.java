@@ -1747,16 +1747,16 @@ public class StorageProxy implements StorageProxyMBean
         {
             for (Replica destination : localDc)
             {
-                //if(mutation.isEcSignalMuattion)
-                //{
+                if(mutation.isEcSignalMuattion)
+                {
                     // dont care about signal mutation response
-                    //MessagingService.instance().send(message, destination.endpoint());
+                    MessagingService.instance().send(message, destination.endpoint());
                     //ECConfig.TotalSignalSent.incrementAndGet();
-                //}
-                //else
-                //{
+                }
+                else
+                {
                     MessagingService.instance().sendWriteWithCallback(message, destination, responseHandler);
-                //}
+                }
             }
         }
         if (dcGroups != null)
