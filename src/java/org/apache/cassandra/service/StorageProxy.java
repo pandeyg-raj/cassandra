@@ -1318,8 +1318,8 @@ public class StorageProxy implements StorageProxyMBean
                 //sendECSignal(mutations,consistencyLevel, requestTime);
                 //long start = System.nanoTime();
 
-                //ConsistencyLevel finalConsistencyLevel = consistencyLevel;
-                //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
+                ConsistencyLevel finalConsistencyLevel = consistencyLevel;
+                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
                 //TimeTakenThreadSpawn.add(System.nanoTime() - start);
                 //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
 
