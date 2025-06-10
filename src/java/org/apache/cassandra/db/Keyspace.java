@@ -538,7 +538,7 @@ public class Keyspace
                                                boolean isDeferrable,
                                                Promise<?> future)
     {
-
+        /*
         if(IsRMWSignalMutation(mutation))
         {
             //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
@@ -546,6 +546,7 @@ public class Keyspace
             return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
 
         }
+        */
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
