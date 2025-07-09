@@ -27,10 +27,15 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.concurrent.ExecutorPlus;
+import org.apache.cassandra.concurrent.SharedExecutorPool;
 import org.yaml.snakeyaml.Yaml;
 
 public class ECConfig
 {
+
+    public static ExecutorPlus EC;
+
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
     private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
 
@@ -140,7 +145,15 @@ public class ECConfig
 
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
-            PriorityThreadPoolUtil.setExecutor(64,Thread.NORM_PRIORITY);
+           // PriorityThreadPoolUtil.setExecutor(64,Thread.NORM_PRIORITY);
+
+           EC =
+            SharedExecutorPool.SHARED.newExecutor(
+            32,                         // maxConcurrency
+            "org.apache.cassandra.request", // jmxPath
+            "ECStage"                 // thread pool name
+            );
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
