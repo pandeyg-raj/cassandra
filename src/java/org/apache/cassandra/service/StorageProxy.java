@@ -1321,7 +1321,7 @@ public class StorageProxy implements StorageProxyMBean
                 ConsistencyLevel finalConsistencyLevel = consistencyLevel;
                 //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
 
-                ECConfig.EC.execute(() -> {
+                ECConfig.ECStage.execute(() -> {
                     sendECSignal(mutations, finalConsistencyLevel, requestTime);
                 });
 

@@ -34,7 +34,7 @@ import org.yaml.snakeyaml.Yaml;
 public class ECConfig
 {
 
-    public static ExecutorPlus EC;
+    public static ExecutorPlus ECStage;
 
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
     private static final Logger logger = LoggerFactory.getLogger(ECConfig.class);
@@ -147,7 +147,7 @@ public class ECConfig
 
            // PriorityThreadPoolUtil.setExecutor(64,Thread.NORM_PRIORITY);
 
-           EC =
+            ECStage =
             SharedExecutorPool.SHARED.newExecutor(
             32,                         // maxConcurrency
             "org.apache.cassandra.request", // jmxPath
