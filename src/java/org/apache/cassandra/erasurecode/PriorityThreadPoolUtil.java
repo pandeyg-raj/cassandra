@@ -71,7 +71,7 @@ public class PriorityThreadPoolUtil {
     public static ThreadPoolExecutor createFixedPriorityPool(int poolSize, int priority) {
         return new ThreadPoolExecutor(
         poolSize,                  // core pool size
-        poolSize * 5,                  // max pool size = core (fixed)
+        poolSize,                  // max pool size = core (fixed)
         30, TimeUnit.SECONDS, // keep alive time
         new LinkedBlockingQueue<>(), // unbounded queue (or customize)
         new PriorityThreadFactory("ECStage",priority)
@@ -86,11 +86,12 @@ public class PriorityThreadPoolUtil {
         int queued = executor.getQueue().size();
         long completed = executor.getCompletedTaskCount();
 
-        //logger.info("=== Thread Pool Status ===\n");
-        //logger.info("Active Threads   : " + active);
-        //logger.info("Total Pool Size  : " + poolSize);
-        //logger.info("Queued Tasks     : " + queued);
-        //logger.info("Completed Tasks  : " + completed);
+        logger.info("=== Thread Pool Status ===\n");
+        logger.info("Active Threads   : " + active);
+        logger.info("Current Pool Size  : " + currentPoolSize);
+        logger.info("Total Pool Size  : " + maxPoolSize);
+        logger.info("Queued Tasks     : " + queued);
+        logger.info("Completed Tasks  : " + completed);
 
         // Monitor logic
         if (active == maxPoolSize && queued > 0) {
@@ -102,5 +103,7 @@ public class PriorityThreadPoolUtil {
         } else if (active < maxPoolSize && queued > 0) {
             logger.info("⚠️ Queue building up even with spare threads — potential inefficiency or blocking.");
         }
+
+
     }
 }

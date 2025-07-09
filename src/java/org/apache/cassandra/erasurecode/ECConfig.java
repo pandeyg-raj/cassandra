@@ -23,6 +23,9 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,6 +121,19 @@ public class ECConfig
         return arr;
     }
 
+    private static final ScheduledExecutorService MONITOR_EXECUTOR = Executors.newSingleThreadScheduledExecutor();
+
+    public static void startThreadPoolLogger() {
+        MONITOR_EXECUTOR.scheduleAtFixedRate(() -> {
+            try {
+                PriorityThreadPoolUtil.printThreadPollInfo();
+            } catch (Exception e) {
+                logger.warn("Failed to log EC thread pool status", e);
+            }
+        }, 0, 10, TimeUnit.SECONDS); // log every 10 seconds
+    }
+
+
     public static void initECConfig() {
 
         //TotalSignalReceived = new AtomicInteger(0);
@@ -145,7 +161,7 @@ public class ECConfig
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
             PriorityThreadPoolUtil.setExecutor(32,Thread.NORM_PRIORITY);
-
+            startThreadPoolLogger();
             /*
             ECStage =
             SharedExecutorPool.SHARED.newExecutor(
