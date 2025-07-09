@@ -161,7 +161,7 @@ public class ECConfig
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 
             PriorityThreadPoolUtil.setExecutor(32,Thread.NORM_PRIORITY);
-            startThreadPoolLogger();
+            //startThreadPoolLogger();
             /*
             ECStage =
             SharedExecutorPool.SHARED.newExecutor(
