@@ -83,6 +83,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewUtils;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.CasWriteTimeoutException;
 import org.apache.cassandra.exceptions.CasWriteUnknownResultException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -1319,12 +1320,13 @@ public class StorageProxy implements StorageProxyMBean
 
 
                 ConsistencyLevel finalConsistencyLevel = consistencyLevel;
-                //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
+                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
 
+                /*
                 ECConfig.ECStage.execute(() -> {
                     sendECSignal(mutations, finalConsistencyLevel, requestTime);
                 });
-
+                */
 
                 //TimeTakenThreadSpawn.add(System.nanoTime() - start);
                 //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);

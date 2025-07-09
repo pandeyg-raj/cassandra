@@ -49,19 +49,20 @@ public class PriorityThreadPoolUtil {
 
     // Custom ThreadFactory that sets thread priority
     public static class PriorityThreadFactory implements ThreadFactory {
+        private final String namePrefix;
         private final int priority;
         private final ThreadFactory defaultFactory = Executors.defaultThreadFactory();
         private int count = 0;
 
-        public PriorityThreadFactory(int priority) {
-            this.priority = priority;
+        public PriorityThreadFactory(String namePrefix,int priority) {
+            this.priority = priority;this.namePrefix = namePrefix;
         }
 
         @Override
         public Thread newThread(Runnable r) {
             Thread t = defaultFactory.newThread(r);
             t.setPriority(priority);
-            t.setName("priority-thread-" + count++);
+            t.setName(namePrefix + "-" + count++);
             return t;
         }
     }
@@ -73,7 +74,7 @@ public class PriorityThreadPoolUtil {
         poolSize * 5,                  // max pool size = core (fixed)
         30, TimeUnit.SECONDS, // keep alive time
         new LinkedBlockingQueue<>(), // unbounded queue (or customize)
-        new PriorityThreadFactory(priority)
+        new PriorityThreadFactory("ECStage",priority)
         );
     }
 
