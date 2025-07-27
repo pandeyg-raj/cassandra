@@ -692,7 +692,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         try
         {
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
-
+            Tracing.trace("ECTRACE READ MEMTABLE READ START");
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -709,7 +709,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
-
+            Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             /*
              * We can't eliminate full sstables based on the timestamp of what we've already read like
              * in collectTimeOrderedData, but we still want to eliminate sstable whose maxTimestamp < mostRecentTombstone
@@ -728,7 +728,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             if (controller.isTrackingRepairedStatus())
                 Tracing.trace("Collecting data from sstables and tracking repaired status");
-
+            Tracing.trace("ECTRACE READ SSTABLE READ START");
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -794,7 +794,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     }
                 }
             }
-
+            Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             if (Tracing.isTracing())
                 Tracing.trace("Skipped {}/{} non-slice-intersecting sstables, included {} due to tombstones",
                                nonIntersectingSSTables, view.sstables.size(), includedDueToTombstones);
@@ -925,6 +925,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
 
         Tracing.trace("Merging memtable contents");
+        Tracing.trace("ECTRACE READ MEMTABLE READ START");
         for (Memtable memtable : view.memtables)
         {
             try (UnfilteredRowIterator iter = memtable.rowIterator(partitionKey, filter.getSlices(metadata()), columnFilter(), isReversed(), metricsCollector))
@@ -939,9 +940,10 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
-
+        Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
+        Tracing.trace("ECTRACE READ SSTABLE READ START");
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
         {
@@ -1010,7 +1012,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
-
+        Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
 
         if (result == null || result.isEmpty())
