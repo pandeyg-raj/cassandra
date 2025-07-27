@@ -1468,7 +1468,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
         long start = nanoTime();
         OpOrder.Group opGroup = context.getGroup();
         CommitLogPosition commitLogPosition = context.getPosition();
-        Tracing.trace("ECTRACE WRITE MEMTABLE WRITE STOP");
+        Tracing.trace("ECTRACE WRITE MEMTABLE WRITE START");
         try
         {
             Memtable mt = data.getMemtableFor(opGroup, commitLogPosition);
