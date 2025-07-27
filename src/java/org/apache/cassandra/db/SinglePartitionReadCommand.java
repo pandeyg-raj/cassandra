@@ -814,11 +814,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
-            if (!view.sstables.isEmpty() &&
-                view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
+            //if (!view.sstables.isEmpty() &&
+            //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
                // ECConfig.readSSTableTime += sstableTimeCost;
                 //ECConfig.readSSTableTimeC++;
-            }
+           // }
 
             // raj end
             if (Tracing.isTracing())
@@ -1047,11 +1047,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
-        if (!view.sstables.isEmpty() &&
-            view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
+        //if (!view.sstables.isEmpty() &&
+        //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
             //ECConfig.readSSTableTime += sstableTimeCost;
             //ECConfig.readSSTableTimeC++;
-        }
+        //}
 
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
 
