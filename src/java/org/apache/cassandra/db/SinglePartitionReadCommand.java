@@ -703,6 +703,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         {
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
             //long startTime = System.currentTimeMillis();
+            Tracing.trace("ECTRACE READ MEMTABLE READ START");
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -720,6 +721,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
             //long memtableTimeCost = System.currentTimeMillis() - startTime;
+            Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             //ECConfig.readMemtableTime += memtableTimeCost;
             //ECConfig.readMemtableTimeC++;
             /*
@@ -742,6 +744,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 Tracing.trace("Collecting data from sstables and tracking repaired status");
 
             //long startSSTableTime = System.currentTimeMillis();
+            Tracing.trace("ECTRACE READ SSTABLE READ START");
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -810,6 +813,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+            Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             if (!view.sstables.isEmpty() &&
                 view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
                // ECConfig.readSSTableTime += sstableTimeCost;
@@ -948,6 +952,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
         Tracing.trace("Merging memtable contents");
         //long startMemtableTime = System.currentTimeMillis();
+        Tracing.trace("ECTRACE READ MEMTABLE READ START");
         for (Memtable memtable : view.memtables)
         {
             try (UnfilteredRowIterator iter = memtable.rowIterator(partitionKey, filter.getSlices(metadata()), columnFilter(), isReversed(), metricsCollector))
@@ -963,12 +968,14 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             }
         }
         //long memtableTimeCost = System.currentTimeMillis() - startMemtableTime;
+        Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         //ECConfig.readMemtableTime += memtableTimeCost;
         //ECConfig.readMemtableTimeC++;
 
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
         //long startSSTableTime = System.currentTimeMillis();
+        Tracing.trace("ECTRACE READ SSTABLE READ START");
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
         {
@@ -1039,6 +1046,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+        Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         if (!view.sstables.isEmpty() &&
             view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
             //ECConfig.readSSTableTime += sstableTimeCost;

@@ -50,7 +50,9 @@ public class CassandraKeyspaceWriteHandler implements KeyspaceWriteHandler
             CommitLogPosition position = null;
             if (makeDurable)
             {
+                Tracing.trace("ECTRACE WRITE COMMITLOG WRITE START");
                 position = addToCommitLog(mutation);
+                Tracing.trace("ECTRACE WRITE COMMITLOG WRITE STOP");
             }
             return new CassandraWriteContext(group, position);
         }

@@ -409,8 +409,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         try
         {
+            Tracing.trace("ECTRACE READ DECODING START");
             encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
-
+            Tracing.trace("ECTRACE READ DECODING STOP");
             //ECConfig.DecodingNeeded++;
             //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
 
