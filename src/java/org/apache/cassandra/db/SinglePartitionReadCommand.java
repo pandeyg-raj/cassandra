@@ -818,7 +818,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-            LatencyRecorder.record("MemtableRead", System.nanoTime() - startSStableRead);
+            LatencyRecorder.record("SStableRead", System.nanoTime() - startSStableRead);
 
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             //if (!view.sstables.isEmpty() &&
@@ -1058,7 +1058,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-        LatencyRecorder.record("MemtableRead", System.nanoTime() - startSStableRead);
+        LatencyRecorder.record("SStableRead", System.nanoTime() - startSStableRead);
 
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         //if (!view.sstables.isEmpty() &&
