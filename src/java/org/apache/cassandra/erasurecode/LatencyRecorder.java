@@ -48,7 +48,7 @@ public class LatencyRecorder {
     private static final String OUTPUT_FILE = "/tmp/cassandra_latencies.log";
 
     // Flush parameters
-    private static final int FLUSH_INTERVAL_SECONDS = 30;     // periodic flush interval
+    private static final int FLUSH_INTERVAL_SECONDS = 300;     // periodic flush interval
     private static final int BUFFER_SIZE_TRIGGER = 1_000_000; // flush if buffer exceeds this many entries
 
     static {
