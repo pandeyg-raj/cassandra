@@ -42,6 +42,7 @@ import org.apache.cassandra.db.SystemKeyspace;
 import org.apache.cassandra.db.compaction.writers.CompactionAwareWriter;
 import org.apache.cassandra.db.compaction.writers.DefaultCompactionWriter;
 import org.apache.cassandra.db.lifecycle.LifecycleTransaction;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
 import org.apache.cassandra.io.sstable.metadata.MetadataCollector;
 import org.apache.cassandra.io.util.File;
@@ -278,6 +279,7 @@ public class CompactionTask extends AbstractCompactionTask
             }
             cfs.getCompactionStrategyManager().compactionLogger.compaction(startTime, transaction.originals(), currentTimeMillis(), newSStables);
 
+            LatencyRecorder.record("Compaction", currentTimeMillis() - startTime);
             // update the metrics
             cfs.metric.compactionBytesWritten.inc(endsize);
         }

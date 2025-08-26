@@ -63,6 +63,7 @@ import org.apache.cassandra.db.transform.RTBoundValidator;
 import org.apache.cassandra.db.transform.Transformation;
 import org.apache.cassandra.db.virtual.VirtualKeyspaceRegistry;
 import org.apache.cassandra.db.virtual.VirtualTable;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.io.sstable.SSTableReadsListener;
@@ -704,6 +705,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
             //long startTime = System.currentTimeMillis();
             Tracing.trace("ECTRACE READ MEMTABLE READ START");
+            long startMemtableRead = System.nanoTime();
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -721,6 +723,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
             //long memtableTimeCost = System.currentTimeMillis() - startTime;
+            LatencyRecorder.record("MemtableRead", System.nanoTime() - startMemtableRead);
+
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             //ECConfig.readMemtableTime += memtableTimeCost;
             //ECConfig.readMemtableTimeC++;
@@ -745,6 +749,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             //long startSSTableTime = System.currentTimeMillis();
             Tracing.trace("ECTRACE READ SSTABLE READ START");
+            long startSStableRead = System.nanoTime();
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -813,6 +818,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+            LatencyRecorder.record("MemtableRead", System.nanoTime() - startSStableRead);
+
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             //if (!view.sstables.isEmpty() &&
             //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
@@ -953,6 +960,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         Tracing.trace("Merging memtable contents");
         //long startMemtableTime = System.currentTimeMillis();
         Tracing.trace("ECTRACE READ MEMTABLE READ START");
+        long startMemtableRead = System.nanoTime();
+
         for (Memtable memtable : view.memtables)
         {
             try (UnfilteredRowIterator iter = memtable.rowIterator(partitionKey, filter.getSlices(metadata()), columnFilter(), isReversed(), metricsCollector))
@@ -968,6 +977,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             }
         }
         //long memtableTimeCost = System.currentTimeMillis() - startMemtableTime;
+        LatencyRecorder.record("MemtableRead", System.nanoTime() - startMemtableRead);
+
         Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         //ECConfig.readMemtableTime += memtableTimeCost;
         //ECConfig.readMemtableTimeC++;
@@ -976,6 +987,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         view.sstables.sort(SSTableReader.maxTimestampDescending);
         //long startSSTableTime = System.currentTimeMillis();
         Tracing.trace("ECTRACE READ SSTABLE READ START");
+        long startSStableRead = System.nanoTime();
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
         {
@@ -1046,6 +1058,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
+        LatencyRecorder.record("MemtableRead", System.nanoTime() - startSStableRead);
+
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         //if (!view.sstables.isEmpty() &&
         //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {

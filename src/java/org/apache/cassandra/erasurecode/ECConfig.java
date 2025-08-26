@@ -198,6 +198,7 @@ public class ECConfig
     public static void freeECConfig()
     {
         PriorityThreadPoolUtil.shutdownExecutor();
+        LatencyRecorder.flush();
         logger.error("EC service freed");
     }
 }

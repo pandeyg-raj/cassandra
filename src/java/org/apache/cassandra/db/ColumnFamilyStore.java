@@ -110,6 +110,7 @@ import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.dht.Splitter;
 import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.StartupException;
@@ -1469,11 +1470,14 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
         OpOrder.Group opGroup = context.getGroup();
         CommitLogPosition commitLogPosition = context.getPosition();
         Tracing.trace("ECTRACE WRITE MEMTABLE WRITE START");
+        long startMemtableWrite = System.nanoTime();
         try
         {
             Memtable mt = data.getMemtableFor(opGroup, commitLogPosition);
             UpdateTransaction indexer = newUpdateTransaction(update, context, updateIndexes, mt);
+
             long timeDelta = mt.put(update, indexer, opGroup);
+            LatencyRecorder.record("MemtableWrite", System.nanoTime() - startMemtableWrite);
             Tracing.trace("ECTRACE WRITE MEMTABLE WRITE STOP");
             DecoratedKey key = update.partitionKey();
             invalidateCachedPartition(key);

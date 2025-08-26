@@ -24,6 +24,7 @@ import java.util.Set;
 import org.apache.cassandra.db.commitlog.CommitLog;
 import org.apache.cassandra.db.commitlog.CommitLogPosition;
 import org.apache.cassandra.db.partitions.PartitionUpdate;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.RequestExecutionException;
 import org.apache.cassandra.schema.TableId;
 import org.apache.cassandra.tracing.Tracing;
@@ -51,7 +52,9 @@ public class CassandraKeyspaceWriteHandler implements KeyspaceWriteHandler
             if (makeDurable)
             {
                 Tracing.trace("ECTRACE WRITE COMMITLOG WRITE START");
+                long start = System.nanoTime();
                 position = addToCommitLog(mutation);
+                LatencyRecorder.record("CommitLog", System.nanoTime() - start);
                 Tracing.trace("ECTRACE WRITE COMMITLOG WRITE STOP");
             }
             return new CassandraWriteContext(group, position);

@@ -41,6 +41,7 @@ import org.apache.cassandra.db.rows.UnfilteredRowIterator;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ECResponse;
 import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.InetAddressAndPort;
 import org.apache.cassandra.locator.Replica;
@@ -410,7 +411,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         try
         {
             Tracing.trace("ECTRACE READ DECODING START");
+            long startDecoding = System.nanoTime();
             encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
+            LatencyRecorder.record("decoding", System.nanoTime() - startDecoding);
             Tracing.trace("ECTRACE READ DECODING STOP");
             //ECConfig.DecodingNeeded++;
             //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
