@@ -79,6 +79,7 @@ import org.apache.cassandra.service.StorageProxy;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.LatencyRecorder;
 import org.apache.cassandra.utils.btree.BTreeSet;
 
 /**
@@ -693,6 +694,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         {
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
             Tracing.trace("ECTRACE READ MEMTABLE READ START");
+            long startMemtableRead = System.nanoTime();
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -709,6 +711,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
+            LatencyRecorder.record(cfs.metadata().keyspace+",MemtableRead", System.nanoTime() - startMemtableRead);
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             /*
              * We can't eliminate full sstables based on the timestamp of what we've already read like
@@ -729,6 +732,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             if (controller.isTrackingRepairedStatus())
                 Tracing.trace("Collecting data from sstables and tracking repaired status");
             Tracing.trace("ECTRACE READ SSTABLE READ START");
+            long startSStableRead = System.nanoTime();
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -794,6 +798,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     }
                 }
             }
+            LatencyRecorder.record(cfs.metadata().keyspace+",SStableRead", System.nanoTime() - startSStableRead);
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             if (Tracing.isTracing())
                 Tracing.trace("Skipped {}/{} non-slice-intersecting sstables, included {} due to tombstones",
@@ -926,6 +931,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
         Tracing.trace("Merging memtable contents");
         Tracing.trace("ECTRACE READ MEMTABLE READ START");
+        long startMemtableRead = System.nanoTime();
         for (Memtable memtable : view.memtables)
         {
             try (UnfilteredRowIterator iter = memtable.rowIterator(partitionKey, filter.getSlices(metadata()), columnFilter(), isReversed(), metricsCollector))
@@ -940,10 +946,12 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
+        LatencyRecorder.record(cfs.metadata().keyspace + ",MemtableRead", System.nanoTime() - startMemtableRead);
         Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
         Tracing.trace("ECTRACE READ SSTABLE READ START");
+        long startSStableRead = System.nanoTime();
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
         {
@@ -1012,6 +1020,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
+        LatencyRecorder.record(cfs.metadata().keyspace+",SStableRead", System.nanoTime() - startSStableRead);
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
 

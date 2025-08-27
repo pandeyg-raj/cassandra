@@ -168,6 +168,7 @@ import org.apache.cassandra.utils.ExecutorUtils;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 import org.apache.cassandra.utils.JsonUtils;
+import org.apache.cassandra.utils.LatencyRecorder;
 import org.apache.cassandra.utils.MBeanWrapper;
 import org.apache.cassandra.utils.NoSpamLogger;
 import org.apache.cassandra.utils.Pair;
@@ -1469,11 +1470,13 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
         OpOrder.Group opGroup = context.getGroup();
         CommitLogPosition commitLogPosition = context.getPosition();
         Tracing.trace("ECTRACE WRITE MEMTABLE WRITE START");
+        long startMemtableWrite = System.nanoTime();
         try
         {
             Memtable mt = data.getMemtableFor(opGroup, commitLogPosition);
             UpdateTransaction indexer = newUpdateTransaction(update, context, updateIndexes, mt);
             long timeDelta = mt.put(update, indexer, opGroup);
+            LatencyRecorder.record(update.metadata().keyspace + ",MemtableWrite", System.nanoTime() - startMemtableWrite);
             Tracing.trace("ECTRACE WRITE MEMTABLE WRITE STOP");
             DecoratedKey key = update.partitionKey();
             invalidateCachedPartition(key);

@@ -216,6 +216,7 @@ import org.apache.cassandra.utils.Clock;
 import org.apache.cassandra.utils.ExecutorUtils;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.JVMStabilityInspector;
+import org.apache.cassandra.utils.LatencyRecorder;
 import org.apache.cassandra.utils.MBeanWrapper;
 import org.apache.cassandra.utils.MD5Digest;
 import org.apache.cassandra.utils.OutputHandler;
@@ -997,6 +998,7 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
                 }
                 finally
                 {
+                    LatencyRecorder.flush();
                     LoggingSupportFactory.getLoggingSupport().onShutdown();
                 }
             }
