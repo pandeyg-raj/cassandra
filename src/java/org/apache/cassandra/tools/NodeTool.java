@@ -233,7 +233,8 @@ public class NodeTool
                 Verify.class,
                 Version.class,
                 ViewBuildStatus.class,
-                ForceCompact.class
+                ForceCompact.class,
+                Breakdown.class
         );
 
         Cli.CliBuilder<NodeToolCmdRunnable> builder = Cli.builder("nodetool");
