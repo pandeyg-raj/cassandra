@@ -723,7 +723,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
             //long memtableTimeCost = System.currentTimeMillis() - startTime;
-            LatencyRecorder.record(cfs.metadata().keyspace+",MemtableRead", System.nanoTime() - startMemtableRead);
+            LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableRead", (System.nanoTime() - startMemtableRead)/1000);
 
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             //ECConfig.readMemtableTime += memtableTimeCost;
@@ -818,7 +818,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-            LatencyRecorder.record(cfs.metadata().keyspace+",SStableRead", System.nanoTime() - startSStableRead);
+            LatencyRecorder.record(cfs.metadata().keyspace ,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
 
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             //if (!view.sstables.isEmpty() &&
@@ -977,7 +977,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             }
         }
         //long memtableTimeCost = System.currentTimeMillis() - startMemtableTime;
-        LatencyRecorder.record(cfs.metadata().keyspace+",MemtableRead", System.nanoTime() - startMemtableRead);
+        LatencyRecorder.record(cfs.metadata().keyspace,"MemtableRead", (System.nanoTime() - startMemtableRead)/1000);
 
         Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         //ECConfig.readMemtableTime += memtableTimeCost;
@@ -1058,7 +1058,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-        LatencyRecorder.record(cfs.metadata().keyspace+",SStableRead", System.nanoTime() - startSStableRead);
+        LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
 
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         //if (!view.sstables.isEmpty() &&

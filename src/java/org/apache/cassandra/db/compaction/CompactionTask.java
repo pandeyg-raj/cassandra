@@ -279,7 +279,7 @@ public class CompactionTask extends AbstractCompactionTask
             }
             cfs.getCompactionStrategyManager().compactionLogger.compaction(startTime, transaction.originals(), currentTimeMillis(), newSStables);
 
-            LatencyRecorder.record("Compaction", currentTimeMillis() - startTime);
+            LatencyRecorder.record("keyspace","Compaction", currentTimeMillis() - startTime);
             // update the metrics
             cfs.metric.compactionBytesWritten.inc(endsize);
         }

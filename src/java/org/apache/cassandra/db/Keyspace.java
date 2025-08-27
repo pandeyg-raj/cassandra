@@ -846,7 +846,7 @@ public class Keyspace
                                             // finish encode data
                                             long startEncoding = System.nanoTime();
                                             byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
-                                            LatencyRecorder.record(mutation.getKeyspaceName() + ",encoding", System.nanoTime() - startEncoding);
+                                            LatencyRecorder.record(mutation.getKeyspaceName() , "encoding", (System.nanoTime() - startEncoding)/1000);
                                             //Tracing.trace("ECing value {} Storage layer",local_value);
 
                                             // find code index corresponding to ip

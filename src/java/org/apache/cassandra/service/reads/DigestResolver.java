@@ -413,7 +413,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             Tracing.trace("ECTRACE READ DECODING START");
             long startDecoding = System.nanoTime();
             encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
-            LatencyRecorder.record(command.metadata().keyspace+",decoding", System.nanoTime() - startDecoding);
+            LatencyRecorder.record(command.metadata().keyspace,"decoding", (System.nanoTime() - startDecoding)/1000);
             Tracing.trace("ECTRACE READ DECODING STOP");
             //ECConfig.DecodingNeeded++;
             //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
