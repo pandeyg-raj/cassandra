@@ -711,7 +711,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
-            // LatencyRecorder.record(cfs.metadata().keyspace,"MemtableRead", System.nanoTime() - startMemtableRead);
+            LatencyRecorder.record(cfs.metadata().keyspace,"MemtableRead", System.nanoTime() - startMemtableRead);
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             /*
              * We can't eliminate full sstables based on the timestamp of what we've already read like
@@ -798,7 +798,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     }
                 }
             }
-            // LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", System.nanoTime() - startSStableRead);
+            LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", System.nanoTime() - startSStableRead);
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             if (Tracing.isTracing())
                 Tracing.trace("Skipped {}/{} non-slice-intersecting sstables, included {} due to tombstones",
@@ -946,7 +946,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
-        // LatencyRecorder.record(cfs.metadata().keyspace , "MemtableRead", System.nanoTime() - startMemtableRead);
+        LatencyRecorder.record(cfs.metadata().keyspace , "MemtableRead", System.nanoTime() - startMemtableRead);
         Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
@@ -1020,7 +1020,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                              controller);
             }
         }
-        // LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", System.nanoTime() - startSStableRead);
+        LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", System.nanoTime() - startSStableRead);
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
 
