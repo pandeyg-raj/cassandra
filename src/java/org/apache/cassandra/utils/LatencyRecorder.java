@@ -23,7 +23,7 @@ public class LatencyRecorder {
      * Signature kept same as before.
      */
     public static void record(String keyspace, String type, long duration) {
-        stats.computeIfAbsent(keyspace, k -> new ConcurrentHashMap<>())
+              stats.computeIfAbsent(keyspace, k -> new ConcurrentHashMap<>())
              .computeIfAbsent(type, t -> new LatencyStats())
              .add(duration);
     }
