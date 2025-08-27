@@ -1,4 +1,4 @@
-package org.apache.cassandra.erasurecode;
+package org.apache.cassandra.utils;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;

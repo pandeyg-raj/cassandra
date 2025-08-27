@@ -1005,7 +1005,6 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
                 }
                 finally
                 {
-                    LatencyRecorder.flush();
                     LoggingSupportFactory.getLoggingSupport().onShutdown();
                 }
             }
