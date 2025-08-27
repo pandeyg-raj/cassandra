@@ -69,13 +69,13 @@ public class LatencyRecorder {
      * @param duration Duration in nanoseconds
      */
     public static void record(String type, long duration) {
-
+        /*
         buffer.add(type + "," + duration);
         if (buffer.size() >= BUFFER_SIZE_TRIGGER) {
            flush();
         }
 
-
+         */
     }
 
     /**
