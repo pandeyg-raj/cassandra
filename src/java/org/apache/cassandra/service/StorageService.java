@@ -332,6 +332,13 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         }
     }
 
+    public String getBreakdownTime() {
+        return LatencyRecorder.getBreakdownTime();
+    }
+    public String resetBreakdownTime() {
+        return LatencyRecorder.resetBreakdownTime();
+    }
+
     /* This abstraction maintains the token/endpoint metadata information */
     private TokenMetadata tokenMetadata = new TokenMetadata();
 

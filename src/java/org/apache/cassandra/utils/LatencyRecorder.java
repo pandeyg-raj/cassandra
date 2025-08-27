@@ -1,5 +1,4 @@
-package org.apache.cassandra.utils;
-
+package org.apache.cassandra.erasurecode;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -23,33 +22,34 @@ public class LatencyRecorder {
      * Signature kept same as before.
      */
     public static void record(String keyspace, String type, long duration) {
-              stats.computeIfAbsent(keyspace, k -> new ConcurrentHashMap<>())
+        stats.computeIfAbsent(keyspace, k -> new ConcurrentHashMap<>())
              .computeIfAbsent(type, t -> new LatencyStats())
              .add(duration);
     }
 
-    /**
-     * Flush all current aggregated stats to disk.
-     * Writes average (total/count) and count per keyspace/type.
-     */
-    public static void flush() {
-       for (var ksEntry : stats.entrySet()) {
-                String keyspace = ksEntry.getKey();
-                for (var typeEntry : ksEntry.getValue().entrySet()) {
-                    String type = typeEntry.getKey();
-                    LatencyStats s = typeEntry.getValue();
 
-                    long count = s.count.sum();
-                    if (count == 0) continue;
+    public static String getBreakdownTime() {
+        for (var ksEntry : stats.entrySet()) {
+            String keyspace = ksEntry.getKey();
+            for (var typeEntry : ksEntry.getValue().entrySet()) {
+                String type = typeEntry.getKey();
+                LatencyStats s = typeEntry.getValue();
 
-                    double average = ((double) s.total.sum()) / count;
-                    logger.info(String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count));
+                long count = s.count.sum();
+                if (count == 0) continue;
+                double average = ((double) s.total.sum()) / count;
+                return String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count);
 
-                }
-       }
+            }
+        }
+        return "nothing here";
     }
 
-       /** Helper class to track total/count for a single keyspace/type */
+    public static String resetBreakdownTime() {
+        stats.clear(); // removes all keyspaces and types
+        return "reset done";
+    }
+    /** Helper class to track total/count for a single keyspace/type */
     private static class LatencyStats {
         final LongAdder count = new LongAdder();
         final LongAdder total = new LongAdder();
