@@ -796,7 +796,7 @@ public class Keyspace
 
                                             if (firstByte != 0) // replicated data first byte shoul be zero
                                             {
-                                                assert false;
+                                                continue; // already erasure coded
                                             }
 
 
