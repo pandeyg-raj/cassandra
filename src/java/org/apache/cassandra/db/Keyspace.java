@@ -56,6 +56,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.index.SecondaryIndexManager;
@@ -843,8 +844,9 @@ public class Keyspace
 
                                             byte isEC = 1;
                                             // finish encode data
+                                            long startEncoding = System.nanoTime();
                                             byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
-
+                                            LatencyRecorder.record(mutation.getKeyspaceName() + ",encoding", System.nanoTime() - startEncoding);
                                             //Tracing.trace("ECing value {} Storage layer",local_value);
 
                                             // find code index corresponding to ip

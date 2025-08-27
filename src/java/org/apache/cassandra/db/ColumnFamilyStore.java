@@ -1477,7 +1477,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
             UpdateTransaction indexer = newUpdateTransaction(update, context, updateIndexes, mt);
 
             long timeDelta = mt.put(update, indexer, opGroup);
-            LatencyRecorder.record("MemtableWrite", System.nanoTime() - startMemtableWrite);
+            LatencyRecorder.record(update.metadata().keyspace+",MemtableWrite", System.nanoTime() - startMemtableWrite);
             Tracing.trace("ECTRACE WRITE MEMTABLE WRITE STOP");
             DecoratedKey key = update.partitionKey();
             invalidateCachedPartition(key);
