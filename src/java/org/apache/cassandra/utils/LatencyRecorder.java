@@ -29,6 +29,7 @@ public class LatencyRecorder {
 
 
     public static String getBreakdownTime() {
+        StringBuilder sb = new StringBuilder();
         for (var ksEntry : stats.entrySet()) {
             String keyspace = ksEntry.getKey();
             for (var typeEntry : ksEntry.getValue().entrySet()) {
@@ -37,13 +38,15 @@ public class LatencyRecorder {
 
                 long count = s.count.sum();
                 if (count == 0) continue;
-                double average = ((double) s.total.sum()) / count;
-                return String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count);
 
+                double average = ((double) s.total.sum()) / count;
+                sb.append(String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count));
             }
         }
-        return "nothing here";
+        if (sb.length() == 0) return "nothing here";
+        return sb.toString();
     }
+
 
     public static String resetBreakdownTime() {
         stats.clear(); // removes all keyspaces and types
