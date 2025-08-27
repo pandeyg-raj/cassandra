@@ -45,7 +45,7 @@ public class LatencyRecorder {
     //private static final ScheduledExecutorService flusher = Executors.newSingleThreadScheduledExecutor();
 
     // Output file path
-    private static final String OUTPUT_FILE = "/tmp/cassandra_latencies.log";
+    private static final String OUTPUT_FILE = "cassandra_latencies.log";
 
     // Flush parameters
     // private static final int FLUSH_INTERVAL_SECONDS = 300;     // periodic flush interval
