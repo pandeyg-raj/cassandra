@@ -278,7 +278,7 @@ public class CompactionTask extends AbstractCompactionTask
                 logger.trace("Actual #keys: {}, Estimated #keys:{}, Err%: {}", totalKeysWritten, estimatedKeys, ((double)(totalKeysWritten - estimatedKeys)/totalKeysWritten));
             }
             cfs.getCompactionStrategyManager().compactionLogger.compaction(startTime, transaction.originals(), currentTimeMillis(), newSStables);
-            LatencyRecorder.record("keyspace","Compaction", currentTimeMillis() - startTime);
+            // LatencyRecorder.record("keyspace","Compaction", currentTimeMillis() - startTime);
             // update the metrics
             cfs.metric.compactionBytesWritten.inc(endsize);
         }
