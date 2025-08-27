@@ -27,11 +27,8 @@ public class LatencyRecorder {
              .add(duration);
     }
 
-    /**
-     * Flush all current aggregated stats to disk.
-     * Writes average (total/count) and count per keyspace/type.
-     */
-    public static void flush() {
+
+    public static String getBreakdownTime() {
         for (var ksEntry : stats.entrySet()) {
             String keyspace = ksEntry.getKey();
             for (var typeEntry : ksEntry.getValue().entrySet()) {
@@ -40,14 +37,18 @@ public class LatencyRecorder {
 
                 long count = s.count.sum();
                 if (count == 0) continue;
-
                 double average = ((double) s.total.sum()) / count;
-                logger.info(String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count));
+                return String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count);
 
             }
         }
+        return "nothing here";
     }
 
+    public static String resetBreakdownTime() {
+        stats.clear(); // removes all keyspaces and types
+        return "reset done";
+    }
     /** Helper class to track total/count for a single keyspace/type */
     private static class LatencyStats {
         final LongAdder count = new LongAdder();

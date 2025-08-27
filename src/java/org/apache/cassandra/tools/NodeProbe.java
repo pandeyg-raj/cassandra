@@ -172,6 +172,14 @@ public class NodeProbe implements AutoCloseable
 
     protected CIDRFilteringMetricsTableMBean cfmProxy;
 
+
+    public String getBreakdownTime() {
+        return ssProxy.getBreakdownTime();
+    }
+    public String resetBreakdownTime() {
+        return ssProxy.resetBreakdownTime();
+    }
+
     /**
      * Creates a NodeProbe using the specified JMX host, port, username, and password.
      *

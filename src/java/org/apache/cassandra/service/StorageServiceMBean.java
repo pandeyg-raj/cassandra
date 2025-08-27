@@ -40,6 +40,12 @@ import org.apache.cassandra.utils.BreaksJMX;
 public interface StorageServiceMBean extends NotificationEmitter
 {
     /**
+     * Get all breakdown time
+     * @return the breakdown time of read/write operations
+     */
+    public String getBreakdownTime();
+    public String resetBreakdownTime();
+    /**
      * Retrieve the list of live nodes in the cluster, where "liveness" is
      * determined by the failure detector of the node being queried.
      *

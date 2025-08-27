@@ -135,6 +135,7 @@ import org.apache.cassandra.dht.StreamStateStore;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.dht.Token.TokenFactory;
 import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
 import org.apache.cassandra.exceptions.UnavailableException;
@@ -330,6 +331,13 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         {
             return 30 * 1000;
         }
+    }
+
+    public String getBreakdownTime() {
+        return LatencyRecorder.getBreakdownTime();
+    }
+    public String resetBreakdownTime() {
+        return LatencyRecorder.resetBreakdownTime();
     }
 
     /* This abstraction maintains the token/endpoint metadata information */
