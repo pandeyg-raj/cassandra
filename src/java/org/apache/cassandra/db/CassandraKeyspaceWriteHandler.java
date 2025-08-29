@@ -54,7 +54,15 @@ public class CassandraKeyspaceWriteHandler implements KeyspaceWriteHandler
                 Tracing.trace("ECTRACE WRITE COMMITLOG WRITE START");
                 long start = System.nanoTime();
                 position = addToCommitLog(mutation);
-                LatencyRecorder.record( keyspace.getName(),"CommitLog", (System.nanoTime() - start)/1000);
+                if(mutation.isEcSignalMuattion)
+                {
+                    LatencyRecorder.record( keyspace.getName(),"CommitLogSignal", (System.nanoTime() - start)/1000);
+                }
+                else
+                {
+                    LatencyRecorder.record( keyspace.getName(),"CommitLog", (System.nanoTime() - start)/1000);
+                }
+
                 Tracing.trace("ECTRACE WRITE COMMITLOG WRITE STOP");
             }
             return new CassandraWriteContext(group, position);

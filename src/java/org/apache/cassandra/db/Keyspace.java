@@ -767,7 +767,7 @@ public class Keyspace
                                                                              FBUtilities.nowInSeconds(),
                                                                              mutation.key());
 
-                                try (ReadExecutionController executionController = localRead.executionController();
+                                try (ReadExecutionController executionController = localRead.executionController().withIsSignalReadFromSelfNode(true);
                                      UnfilteredPartitionIterator iterator = localRead.executeLocally(executionController))
                                 {
                                     // first we have to transform it into a PartitionIterator
@@ -888,7 +888,7 @@ public class Keyspace
                                              */
                                             mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                             Mutation ECmutation = mutationBuilder.build();
-
+                                            ECmutation.isEcSignalMuattion = true;
                                             Stage.MUTATION.execute(() ->
                                                                    applyInternal(ECmutation, makeDurable, true, isDroppable, true, future)
                                             );

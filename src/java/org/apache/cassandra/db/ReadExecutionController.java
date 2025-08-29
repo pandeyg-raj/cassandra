@@ -32,6 +32,18 @@ import static org.apache.cassandra.utils.MonotonicClock.Global.preciseTime;
 
 public class ReadExecutionController implements AutoCloseable
 {
+
+    // to keep track if read is from client or self replica after ec-signal (replica read for erasure coding)
+    public  boolean SignalReadFromSelfNode = false;
+    public ReadExecutionController withIsSignalReadFromSelfNode(boolean SignalReadFromSelfNode) {
+        this.SignalReadFromSelfNode = SignalReadFromSelfNode;
+        return this;
+    }
+
+    public boolean isSignalReadFromSelfNode() {
+        return SignalReadFromSelfNode;
+    }
+
     private static final long NO_SAMPLING = Long.MIN_VALUE;
 
     // For every reads

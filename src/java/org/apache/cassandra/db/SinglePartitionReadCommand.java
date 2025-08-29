@@ -722,9 +722,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
-            //long memtableTimeCost = System.currentTimeMillis() - startTime;
-            LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableRead", (System.nanoTime() - startMemtableRead)/1000);
-
+            long memtableTimeCost = ((System.nanoTime() - startMemtableRead)/1000);
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             //ECConfig.readMemtableTime += memtableTimeCost;
             //ECConfig.readMemtableTimeC++;
@@ -818,8 +816,16 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
             // raj debug start full block addition
             //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-            LatencyRecorder.record(cfs.metadata().keyspace ,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
-
+            if (controller.isSignalReadFromSelfNode())
+            {
+                LatencyRecorder.record(cfs.metadata().keyspace, "SStableReadSignal", (System.nanoTime() - startSStableRead) / 1000);
+                LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableReadSignal", memtableTimeCost);
+            }
+            else
+            {
+                LatencyRecorder.record(cfs.metadata().keyspace, "SStableRead", (System.nanoTime() - startSStableRead) / 1000);
+                LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableRead", memtableTimeCost);
+            }
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             //if (!view.sstables.isEmpty() &&
             //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
@@ -977,8 +983,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             }
         }
         //long memtableTimeCost = System.currentTimeMillis() - startMemtableTime;
-        LatencyRecorder.record(cfs.metadata().keyspace,"MemtableRead", (System.nanoTime() - startMemtableRead)/1000);
 
+        long memtableTimeCost = ((System.nanoTime() - startMemtableRead)/1000);
         Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
         //ECConfig.readMemtableTime += memtableTimeCost;
         //ECConfig.readMemtableTimeC++;
@@ -1058,8 +1064,18 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
 
         //long sstableTimeCost = System.currentTimeMillis() - startSSTableTime;
-        LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
+        if (controller.isSignalReadFromSelfNode())
+        {
+            LatencyRecorder.record(cfs.metadata().keyspace, "SStableReadSignal", (System.nanoTime() - startSStableRead) / 1000);
+            LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableReadSignal", memtableTimeCost);
 
+        }
+        else
+        {
+            LatencyRecorder.record(cfs.metadata().keyspace, "SStableRead", (System.nanoTime() - startSStableRead) / 1000);
+            LatencyRecorder.record(cfs.metadata().keyspace ,"MemtableRead", memtableTimeCost);
+
+        }
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
         //if (!view.sstables.isEmpty() &&
         //    view.sstables.get(0).getColumnFamilyName().contains("rajt")) {
