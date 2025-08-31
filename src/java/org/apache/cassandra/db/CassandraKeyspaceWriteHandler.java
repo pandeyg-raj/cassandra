@@ -65,7 +65,7 @@ public class CassandraKeyspaceWriteHandler implements KeyspaceWriteHandler
 
                 Tracing.trace("ECTRACE WRITE COMMITLOG WRITE STOP");
             }
-            return new CassandraWriteContext(group, position);
+            return new CassandraWriteContext(group, position,mutation.isEcSignalMuattion);
         }
         catch (Throwable t)
         {

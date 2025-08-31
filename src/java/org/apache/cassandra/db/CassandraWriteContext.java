@@ -27,12 +27,19 @@ public class CassandraWriteContext implements WriteContext
 {
     private final OpOrder.Group opGroup;
     private final CommitLogPosition position;
-
+    public boolean isEcSignalMuattion = false;
     public CassandraWriteContext(OpOrder.Group opGroup, CommitLogPosition position)
     {
         Preconditions.checkArgument(opGroup != null);
         this.opGroup = opGroup;
         this.position = position;
+    }
+    public CassandraWriteContext(OpOrder.Group opGroup, CommitLogPosition position,boolean isEcSignalMuattion )
+    {
+        Preconditions.checkArgument(opGroup != null);
+        this.opGroup = opGroup;
+        this.position = position;
+        this.isEcSignalMuattion = isEcSignalMuattion;
     }
 
     public static CassandraWriteContext fromContext(WriteContext context)
