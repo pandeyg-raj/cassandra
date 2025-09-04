@@ -21,6 +21,7 @@ import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.locator.InetAddressAndPort;
 import org.apache.cassandra.net.*;
 import org.apache.cassandra.tracing.Tracing;
+import org.apache.cassandra.utils.LatencyRecorder;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static org.apache.cassandra.db.commitlog.CommitLogSegment.ENTRY_OVERHEAD_SIZE;
@@ -44,6 +45,7 @@ public class MutationVerbHandler extends AbstractMutationVerbHandler<Mutation>
     @Override
     public void doVerb(Message<Mutation> message)
     {
+        long startWriteCommandReplica = System.nanoTime();
         if (approxTime.now() > message.expiresAtNanos())
         {
             Tracing.trace("Discarding mutation from {} (timed out)", message.from());
@@ -62,6 +64,7 @@ public class MutationVerbHandler extends AbstractMutationVerbHandler<Mutation>
         try
         {
             processMessage(message, respondToAddress);
+            LatencyRecorder.record(message.payload.getKeyspaceName() , "WriteCommandReplica", (System.nanoTime() - startWriteCommandReplica) / 1000);
         }
         catch (WriteTimeoutException wto)
         {

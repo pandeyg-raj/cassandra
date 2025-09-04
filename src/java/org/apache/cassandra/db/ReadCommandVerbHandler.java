@@ -33,6 +33,7 @@ import org.apache.cassandra.net.Message;
 import org.apache.cassandra.net.MessagingService;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.tracing.Tracing;
+import org.apache.cassandra.utils.LatencyRecorder;
 import org.apache.cassandra.utils.NoSpamLogger;
 
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -47,6 +48,7 @@ public class ReadCommandVerbHandler implements IVerbHandler<ReadCommand>
 
     public void doVerb(Message<ReadCommand> message)
     {
+        long startReadCommandReplica = System.nanoTime();
         if (StorageService.instance.isBootstrapMode())
         {
             throw new RuntimeException("Cannot service reads while bootstrapping!");
@@ -124,6 +126,7 @@ public class ReadCommandVerbHandler implements IVerbHandler<ReadCommand>
             Message<ReadResponse> reply = message.responseWith(response);
             reply = MessageParams.addToMessage(reply);
             MessagingService.instance().send(reply, message.from());
+            LatencyRecorder.record(message.payload.metadata().keyspace , "ReadCommandReplica", (System.nanoTime() - startReadCommandReplica) / 1000);
         }
         else
         {
