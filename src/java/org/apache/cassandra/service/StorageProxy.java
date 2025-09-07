@@ -83,6 +83,7 @@ import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.view.ViewUtils;
 import org.apache.cassandra.dht.Token;
 import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.CasWriteTimeoutException;
 import org.apache.cassandra.exceptions.CasWriteUnknownResultException;
@@ -954,6 +955,7 @@ public class StorageProxy implements StorageProxyMBean
             // We track latency based on request processing time, since the amount of time that request spends in the queue
             // is not a representative metric of replica performance.
             long latency = nanoTime() - requestTime.startedAtNanos();
+            LatencyRecorder.record(mutations.get(0).getKeyspaceName() , "CoordinatorWriteTotal", latency / 1000);
             writeMetrics.addNano(latency);
             writeMetricsForLevel(consistencyLevel).addNano(latency);
             updateCoordinatorWriteLatencyTableMetric(mutations, latency);
@@ -2243,11 +2245,16 @@ public class StorageProxy implements StorageProxyMBean
             // client request. This is a measure of how long this specific individual read took, not total time since
             // processing of the client began.
             long latency = nanoTime() - start;
+            long mylatency = nanoTime() - requestTime.startedAtNanos();
             readMetrics.addNano(latency);
             readMetricsForLevel(consistencyLevel).addNano(latency);
             // TODO avoid giving every command the same latency number.  Can fix this in CASSADRA-5329
             for (ReadCommand command : group.queries)
+            {
+                LatencyRecorder.record(command.metadata().keyspace , "CoordinatorReadTotalmy", mylatency / 1000);
+                LatencyRecorder.record(command.metadata().keyspace , "CoordinatorReadTotal", latency / 1000);
                 Keyspace.openAndGetStore(command.metadata()).metric.coordinatorReadLatency.update(latency, TimeUnit.NANOSECONDS);
+            }
         }
     }
 
