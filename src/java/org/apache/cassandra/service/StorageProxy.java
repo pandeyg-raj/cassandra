@@ -141,6 +141,7 @@ import org.apache.cassandra.triggers.TriggerExecutor;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.Clock;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.LatencyRecorder;
 import org.apache.cassandra.utils.MBeanWrapper;
 import org.apache.cassandra.utils.MonotonicClock;
 import org.apache.cassandra.utils.NoSpamLogger;
@@ -947,6 +948,7 @@ public class StorageProxy implements StorageProxyMBean
             // We track latency based on request processing time, since the amount of time that request spends in the queue
             // is not a representative metric of replica performance.
             long latency = nanoTime() - requestTime.startedAtNanos();
+            LatencyRecorder.record(mutations.get(0).getKeyspaceName() , "CoordinatorWriteTotal", latency / 1000);
             writeMetrics.addNano(latency);
             writeMetricsForLevel(consistencyLevel).addNano(latency);
             updateCoordinatorWriteLatencyTableMetric(mutations, latency);
@@ -2054,11 +2056,17 @@ public class StorageProxy implements StorageProxyMBean
             // client request. This is a measure of how long this specific individual read took, not total time since
             // processing of the client began.
             long latency = nanoTime() - start;
+            long mylatency = nanoTime() - requestTime.startedAtNanos();
             readMetrics.addNano(latency);
             readMetricsForLevel(consistencyLevel).addNano(latency);
             // TODO avoid giving every command the same latency number.  Can fix this in CASSADRA-5329
             for (ReadCommand command : group.queries)
+            {
+                LatencyRecorder.record(command.metadata().keyspace , "CoordinatorReadTotalmy", mylatency / 1000);
+                LatencyRecorder.record(command.metadata().keyspace , "CoordinatorReadTotal", latency / 1000);
                 Keyspace.openAndGetStore(command.metadata()).metric.coordinatorReadLatency.update(latency, TimeUnit.NANOSECONDS);
+
+            }
         }
     }
 
