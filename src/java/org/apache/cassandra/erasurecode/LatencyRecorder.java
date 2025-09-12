@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,7 @@ public class LatencyRecorder {
                 if (count == 0) continue;
 
                 double average = ((double) s.total.sum()) / count;
-                sb.append(String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count));
+                sb.append(String.format("%s,%s,avg=%.2f,min=%d,max=%d,count=%d%n",keyspace, type, average, min, max, count));
             }
         }
         if (sb.length() == 0) return "nothing here";
@@ -56,6 +57,10 @@ public class LatencyRecorder {
     private static class LatencyStats {
         final LongAdder count = new LongAdder();
         final LongAdder total = new LongAdder();
+          // Update min atomically
+        min.getAndUpdate(current -> Math.min(current, duration));
+        // Update max atomically
+        max.getAndUpdate(current -> Math.max(current, duration));
 
         void add(long duration) {
             count.increment();
@@ -63,3 +68,4 @@ public class LatencyRecorder {
         }
     }
 }
+
