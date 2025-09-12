@@ -41,9 +41,9 @@ public class LatencyRecorder {
                 if (count == 0) continue;
 
                 double average = ((double) s.total.sum()) / count;
-                long min = s.min.get();
-                long max = s.max.get();
-                sb.append(String.format("%s,%s,avg=%.2f,p95=%.2f,p99=%.2f,count=%d%n",keyspace, type, average,s.getPercentile(95),s.getPercentile(99),count));
+                long min = s.min;
+                long max = s.max;
+                sb.append(String.format("%s,%s,avg=%.2f,p95=%.2f,p99=%.2f,min=%d,max=%d,count=%d%n",keyspace, type, average,s.getPercentile(95),s.getPercentile(99),s.min, s.max,count));
             }
         }
         if (sb.length() == 0) return "nothing here";
@@ -80,6 +80,7 @@ public class LatencyRecorder {
         }
     }
 }
+
 
 
 
