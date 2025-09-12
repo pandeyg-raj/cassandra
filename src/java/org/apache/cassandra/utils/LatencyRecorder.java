@@ -40,7 +40,9 @@ public class LatencyRecorder {
                 if (count == 0) continue;
 
                 double average = ((double) s.total.sum()) / count;
-                sb.append(String.format("%s,%s,avg=%.2f,count=%d%n", keyspace, type, average, count));
+                long min = s.min.get();
+                long max = s.max.get();
+                sb.append(String.format("%s,%s,avg=%.2f,min=%d,max=%d,count=%d%n",keyspace, type, average, min, max, count));
             }
         }
         if (sb.length() == 0) return "nothing here";
@@ -56,10 +58,17 @@ public class LatencyRecorder {
     private static class LatencyStats {
         final LongAdder count = new LongAdder();
         final LongAdder total = new LongAdder();
+        final AtomicLong min = new AtomicLong(Long.MAX_VALUE);
+        final AtomicLong max = new AtomicLong(Long.MIN_VALUE);
 
         void add(long duration) {
             count.increment();
             total.add(duration);
+            // Update min atomically
+            min.getAndUpdate(current -> Math.min(current, duration));
+            // Update max atomically
+            max.getAndUpdate(current -> Math.max(current, duration));
         }
     }
 }
+
