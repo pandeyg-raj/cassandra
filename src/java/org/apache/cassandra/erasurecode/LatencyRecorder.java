@@ -1,4 +1,4 @@
-package org.apache.cassandra.utils;
+package org.apache.cassandra.erasurecode;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -80,6 +80,7 @@ public class LatencyRecorder {
         }
     }
 }
+
 
 
 
