@@ -186,11 +186,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         {
            //logger.error("Column "+ECConfig.EC_COLUMN+" is requested in read");
            return true;
-        } else 
-        {
-           //logger.error("Column "+ECConfig.EC_COLUMN+" is NOT requested in read");
-            return false;
-        }
+        } 
+        //logger.error("Column "+ECConfig.EC_COLUMN+" is NOT requested in read");
+           return false;
     }
 
     public PartitionIterator myCombineResponse()
