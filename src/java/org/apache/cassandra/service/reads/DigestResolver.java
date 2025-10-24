@@ -180,10 +180,17 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
     public boolean isMyRead()
     {
-        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
         //logger.info("Raj Read for keyspace: "+ command.metadata().keyspace);
-        boolean isMyRead = (tagMetadata != null);
-        return isMyRead;
+        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        if (tagMetadata != null && command.columnFilter().queriedColumns().contains(tagMetadata)) 
+        {
+           //logger.error("Column "+ECConfig.EC_COLUMN+" is requested in read");
+           return true;
+        } else 
+        {
+           //logger.error("Column "+ECConfig.EC_COLUMN+" is NOT requested in read");
+            return false;
+        }
     }
 
     public PartitionIterator myCombineResponse()
