@@ -56,7 +56,13 @@ class SingleRangeResponse extends AbstractIterator<RowIterator> implements Parti
             return;
 
         handler.awaitResults();
-        result = resolver.resolve();
+        if(resolver.isMyRead())
+        {
+            result = resolver.myCombineResponseRange();
+        }
+        else {
+            result = resolver.resolve();
+        }
     }
 
     @Override

@@ -17,10 +17,13 @@
  */
 package org.apache.cassandra.service.reads;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
@@ -33,29 +36,42 @@ import org.apache.cassandra.db.DecoratedKey;
 import org.apache.cassandra.db.DeletionTime;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.ReadResponse;
+import org.apache.cassandra.db.RegularAndStaticColumns;
 import org.apache.cassandra.db.filter.DataLimits;
 import org.apache.cassandra.db.partitions.PartitionIterator;
 import org.apache.cassandra.db.partitions.PartitionIterators;
+import org.apache.cassandra.db.partitions.PartitionUpdate;
+import org.apache.cassandra.db.partitions.SingletonUnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterator;
 import org.apache.cassandra.db.partitions.UnfilteredPartitionIterators;
+import org.apache.cassandra.db.rows.BTreeRow;
+import org.apache.cassandra.db.rows.Cell;
 import org.apache.cassandra.db.rows.RangeTombstoneMarker;
 import org.apache.cassandra.db.rows.Row;
+import org.apache.cassandra.db.rows.RowIterator;
 import org.apache.cassandra.db.rows.UnfilteredRowIterator;
 import org.apache.cassandra.db.rows.UnfilteredRowIterators;
 import org.apache.cassandra.db.transform.EmptyPartitionsDiscarder;
 import org.apache.cassandra.db.transform.Filter;
 import org.apache.cassandra.db.transform.FilteredPartitions;
 import org.apache.cassandra.db.transform.Transformation;
+import org.apache.cassandra.erasurecode.ECConfig;
+import org.apache.cassandra.erasurecode.ECResponse;
+import org.apache.cassandra.erasurecode.ErasureCode;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.locator.Endpoints;
 import org.apache.cassandra.locator.ReplicaPlan;
 import org.apache.cassandra.net.Message;
+import org.apache.cassandra.schema.ColumnMetadata;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.reads.repair.NoopReadRepair;
 import org.apache.cassandra.service.reads.repair.ReadRepair;
 import org.apache.cassandra.service.reads.repair.RepairedDataTracker;
 import org.apache.cassandra.service.reads.repair.RepairedDataVerifier;
+import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
+import org.apache.cassandra.utils.ByteBufferUtil;
 
 import static com.google.common.collect.Iterables.*;
 
@@ -127,6 +143,295 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                                      i -> shortReadProtectedResponse(i, context, runOnShortRead),
                                      UnaryOperator.identity(),
                                      repairedDataTracker);
+    }
+
+
+    public ReadResponse modifyCellValue(ReadResponse originalResponse,String encoded_value) {
+
+
+        // Extract the data from the original response
+        PartitionIterator partitions = UnfilteredPartitionIterators.filter(originalResponse.makeIterator(command), command.nowInSec());
+        // Create a new PartitionIterator to hold the modified data
+
+        // Use a builder to collect the modified partitions
+        ReadResponse resp = null;
+        while (partitions.hasNext()) {
+            try (RowIterator rows = partitions.next()) {
+                TableMetadata tableMetadata  = rows.metadata();
+                DecoratedKey partitionKey = rows.partitionKey();
+                RegularAndStaticColumns clm = rows.columns();
+
+                PartitionUpdate.Builder builder =  new PartitionUpdate.Builder(tableMetadata, partitionKey, clm, 1, false);
+
+                // Traverse rows and modify the target cell
+                while (rows.hasNext()) {
+                    Row row = rows.next();
+                    Row.Builder rowBuilder = BTreeRow.sortedBuilder();
+
+                    // Copy clustering
+                    rowBuilder.newRow(row.clustering());
+
+                    // Traverse cells
+                    for (Cell<?> cell : row.cells()) {
+                        if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
+                            // Modify target cell
+                            rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
+                        } else {
+                            // Copy existing cells
+                            rowBuilder.addCell(cell);
+                        }
+                    }
+
+                    // Add modified row to partition builder
+                    builder.add(rowBuilder.build());
+                }
+                PartitionUpdate partitionUpdate = builder.build();
+                UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
+                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
+
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                throw new RuntimeException(e);
+            }
+        }
+        if(resp==null)
+        {
+            logger.error("Problem");
+        }
+        // Create a new ReadResponse with modified data
+        return resp;
+
+    }
+
+    public boolean isMyRead()
+    {
+        //logger.info("Raj Read for keyspace: "+ command.metadata().keyspace);
+        ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        if (tagMetadata != null && command.columnFilter().queriedColumns().contains(tagMetadata))
+        {
+            logger.error("Column "+ECConfig.EC_COLUMN+" is requested in read");
+            return true;
+        }
+        //logger.error("Column "+ECConfig.EC_COLUMN+" is NOT requested in read");
+        return false;
+    }
+
+    public PartitionIterator myCombineResponseRange()
+    {
+        // array to keep track which code part is available
+        boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
+        //boolean IswholeValue = false;
+        ReadResponse tmp = null;
+        Collection<Message<ReadResponse>> snapshot = responses.snapshot();
+
+        if( snapshot.size() < ECConfig.DATA_SHARDS )
+        {
+            Tracing.trace("Only got {} responses:{} , needed {}", snapshot.size(), ECConfig.DATA_SHARDS);
+        }
+        //logger.error("Got responses total "+snapshot.size());
+        Map<DecoratedKey, ECResponse[]> partitionResponses = new HashMap<>();
+
+        int ShardSize =-1;
+        for (Message<ReadResponse> message : snapshot)
+        {
+            //String messageSender = message.from().getHostAddress(false);
+            //int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
+
+            //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
+            ReadResponse response = message.payload;
+            // check if the response is indeed a data response
+            // we shouldn't get a digest response here
+
+            //assert response.isDigestResponse() == false;
+            if(response.isDigestResponse() == true)
+            {
+                logger.error("digest received");
+                continue;
+            }
+
+            if(tmp == null){
+                tmp = message.payload;
+            }
+            else
+            {
+                if( tmp.capacity < (message.payload).capacity)
+                {
+                    tmp = message.payload;
+                }
+            }
+            // get the partition iterator corresponding to the
+            // current data response
+            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), command.nowInSec());
+
+            // get the z value column
+            while(pi.hasNext())
+            {
+                // pi.next() returns a RowIterator
+                RowIterator ri = pi.next();
+                DecoratedKey partitionKey = ri.partitionKey();
+
+                ECResponse[] ecResponses = partitionResponses
+                                           .computeIfAbsent(partitionKey, k -> {
+                                               ECResponse[] arr = new ECResponse[ECConfig.TOTAL_SHARDS];
+                                               for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
+                                                   arr[i] = new ECResponse();
+                                               return arr;
+                                           });
+                while(ri.hasNext())
+                {
+                    // todo: the entire row is read for the sake of development
+                    // future improvement could be made
+                    ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+                    try
+                    {
+                        Cell c = ri.next().getCell(colMeta); // ri.next() = Row
+                        ByteBuffer Finalbuffer = c.buffer();
+
+                        byte isEc = Finalbuffer.get();
+
+                        //if isEc !=1  not necessarly whole value, some "signal string from a new node just boot up,
+                        // cassandra send last message to bootup node , which is signal string ?"
+
+                        if( isEc !=1)
+                        {
+                            Finalbuffer.position(0);
+                            if(isEc == 0) // whole value
+                            {
+                                Finalbuffer.position(1);
+                                //logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
+                                ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+
+                            }
+                            else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
+                            {
+                                // garbage value consider lost
+                                logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining() + "tid:"+Thread.currentThread().getId());
+                                continue;
+                            }
+                            else// this should never happen
+                            {
+                                assert true == false;
+                            }
+                        }
+                        // do not comment below , need to remove from finalbuffer
+                        // to move pointer forward
+                        int n = Finalbuffer.getInt();
+                        int k = Finalbuffer.getInt();
+                        int codeIndex = Finalbuffer.getInt();
+                        int coded_valueLength = Finalbuffer.getInt();
+                        ShardSize = coded_valueLength;
+
+                        if(codeIndex < ECConfig.DATA_SHARDS) // data shard
+                        {
+
+                            // logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
+                            //String value = ByteBufferUtil.string(Finalbuffer);
+                            //ecResponses[codeIndex].setEcCode(value);
+                            //ecResponses[codeIndex].setCodeLength(value.length());
+                            ecResponses[codeIndex].setEcCode(Finalbuffer.slice().duplicate());
+
+                        }
+                        else // parity shard
+                        {
+                            // logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
+                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
+
+
+                        }
+                        ecResponses[codeIndex].setCodeLength(coded_valueLength);
+                        ecResponses[codeIndex].setIsEcCoded(isEc);
+                        ecResponses[codeIndex].setCodeTimestamp(c.timestamp());
+                        ecResponses[codeIndex].setCodeAvailable(true);
+                        ecResponses[codeIndex].setEcCodeIndex(codeIndex);
+                        isCodeavailable[codeIndex] = true;
+                    }
+                    catch (Exception e)
+                    {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
+                //partitionResponses.add(ecResponses);
+            }
+        }
+
+
+        // verify if decoding needed
+        // no decodign needed if all data fragment present, just combine and return
+        // no decoding needed/possible if whole data presend or not enough codes available
+
+        // Now reconstruct values for all partitions
+        List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+
+        // check if all "DATA" codes available
+        for (ECResponse[] ecResponses : partitionResponses.values())
+        {
+            boolean IsEcDeccodeNeeded = false;
+            for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+            {
+                if (!ecResponses[i].getIsCodeAvailable())
+                {
+                    IsEcDeccodeNeeded = true;
+                    break;
+                }
+            }
+
+            String combinedValue = "";
+
+            if (!IsEcDeccodeNeeded)
+            {
+                try
+                {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+                        sb.append(ByteBufferUtil.string(ecResponses[i].getEcCode()));
+                    combinedValue = sb.toString().trim();
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+            else
+            {
+                // Need to decode missing shards
+                int shardSize = ecResponses[0].getCodeLength();
+                byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][shardSize];
+                boolean[] isAvailable = new boolean[ECConfig.TOTAL_SHARDS];
+
+                for (int i = 0; i < ecResponses.length; i++)
+                {
+                    if (ecResponses[i].getIsCodeAvailable())
+                    {
+                        ByteBuffer buf = (i < ECConfig.DATA_SHARDS)
+                                         ? ecResponses[i].getEcCode()
+                                         : ecResponses[i].getEcCodeParity();
+                        buf.get(decodeMatrix[ecResponses[i].getEcCodeIndex()]);
+                        isAvailable[i] = true;
+                    }
+                }
+
+                try
+                {
+                    long startDecoding = System.nanoTime();
+                    combinedValue = new ErasureCode().MyDecode(decodeMatrix, isAvailable,
+                                                               shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                    LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
+                }
+                catch (Exception e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            ReadResponse rebuilt = modifyCellValue(tmp, combinedValue);
+            rebuiltPartitions.add(rebuilt.makeIterator(command));
+        }
+        UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
+        return UnfilteredPartitionIterators.filter(merged, command.nowInSec());
     }
 
     private boolean usesReplicaFilteringProtection()
