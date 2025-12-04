@@ -91,7 +91,7 @@ miss_idx = 1
 # --------------------------
 try:
     while True:
-        sleep(1)
+        sleep(10)
         stats = b.get_table("stats")
         hits = stats[hits_idx].value
         misses = stats[miss_idx].value
