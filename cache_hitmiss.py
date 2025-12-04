@@ -8,17 +8,15 @@ import datetime
 # --------------------------
 # Helper to detect Cassandra PID automatically
 # --------------------------
-def find_pid_by_name(cmd_substring, name_substring):
-    """
-    Finds the PID of a process whose command contains 'cmd_substring'
-    and whose name contains 'name_substring' (case-insensitive).
-    Returns the first matching PID.
-    """
+
+def find_cassandra_pid():
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
         try:
-            cmdline = ' '.join(proc.info['cmdline']) if proc.info['cmdline'] else ''
-            name = proc.info['name'] if proc.info['name'] else ''
-            if cmd_substring in cmdline and name_substring.lower() in name.lower():
+            cmdline = proc.info['cmdline']
+            if not cmdline:
+                continue
+            cmdline_str = ' '.join(cmdline).lower()
+            if 'java' in cmdline_str and 'cassandra' in cmdline_str:
                 return proc.info['pid']
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
@@ -37,7 +35,7 @@ elif len(sys.argv) == 2:
 # --------------------------
 # Detect Cassandra PID
 # --------------------------
-TARGET_PID = find_pid_by_name('java', 'cassandra')
+TARGET_PID = find_cassandra_pid()
 if not TARGET_PID:
     print("Cassandra process not found. Exiting.")
     exit(1)
