@@ -463,13 +463,13 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 elseTime += (System.nanoTime() - dataCombination);  // Add time spent in if block
                 // logger.error("CombineResponseRange data combining with DECODE took "+ (( System.nanoTime() - dataCombination2) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
-            logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-            logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
             ReadResponse rebuilt = modifyCellValue(tmp, combined);
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
-        
-        
+        logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+
+
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
        
                             
