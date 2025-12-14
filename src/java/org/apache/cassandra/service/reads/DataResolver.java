@@ -192,8 +192,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 }
                 PartitionUpdate partitionUpdate = builder.build();
                 UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
-                //resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
-                rebuiltPartitions.add(new SingletonUnfilteredPartitionIterator(rowIterator));
+                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
+                //rebuiltPartitions.add(new SingletonUnfilteredPartitionIterator(rowIterator));
             }
             catch (Exception e)
             {
@@ -202,8 +202,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             }
         }
         // Merge all partitions into a single ReadResponse
-        UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
-        resp = ReadResponse.createSimpleDataResponse(merged, command.columnFilter());
+        //UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
+        //resp = ReadResponse.createSimpleDataResponse(merged, command.columnFilter());
 
         logger.error("mcv took "+ (((System.nanoTime() - mcvStart)) / 1000000) +"ms for partitions/rows count" );
 
