@@ -394,13 +394,14 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     combinedValue = sb.toString().trim();
 
                     */
-                    int totalLength = ECConfig.DATA_SHARDS * ShardSize;
-                    byte[] combinedBytes = new byte[totalLength];
+
+                    byte[] combinedBytes = new byte[ECConfig.DATA_SHARDS * ShardSize];
                     int offset = 0;
                     for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
-                        ByteBuffer shard = ecResponses[i].getEcCode();
-                        shard.get(combinedBytes, offset, shard.remaining());
-                        offset += shard.remaining();
+                        ByteBuffer shard = ecResponses[i].getEcCode().duplicate(); // safe copy
+                        shard.position(0); // ensure reading full shard
+                        shard.get(combinedBytes, offset, ShardSize);
+                        offset += ShardSize;
                     }
                     combinedValue = new String(combinedBytes, StandardCharsets.UTF_8);
 
