@@ -157,6 +157,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         // Use a builder to collect the modified partitions
         ReadResponse resp = null;
         long mcvStart = System.nanoTime();
+        ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
         while (partitions.hasNext()) {
             try (RowIterator rows = partitions.next()) {
                 TableMetadata tableMetadata  = rows.metadata();
@@ -175,7 +177,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
                     // Traverse cells
                     for (Cell<?> cell : row.cells()) {
-                        if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
+                        //if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
+                        if (cell.column() == colMeta) {
                             // Modify target cell
                             rowBuilder.addCell(cell.withUpdatedValue(encoded_value));
                         } else {
@@ -189,8 +192,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 }
                 PartitionUpdate partitionUpdate = builder.build();
                 UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
-                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
-
+                //resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
+                rebuiltPartitions.add(new SingletonUnfilteredPartitionIterator(rowIterator));
             }
             catch (Exception e)
             {
@@ -198,6 +201,10 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 throw new RuntimeException(e);
             }
         }
+        // Merge all partitions into a single ReadResponse
+        UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
+        resp = ReadResponse.createSimpleDataResponse(merged, command.columnFilter());
+
         logger.error("mcv took "+ (((System.nanoTime() - mcvStart)) / 1000000) +"ms for partitions/rows count" );
 
         if(resp==null)
