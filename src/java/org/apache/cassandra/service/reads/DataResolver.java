@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -378,9 +379,9 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         // no decoding needed/possible if whole data presend or not enough codes available
 
         // Now reconstruct values for all partitions
-        List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+        //List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
         ErasureCode decoder = new ErasureCode();
-        boolean IsEcDeccodeNeeded = false;
+
 
         // check if all "DATA" codes available
         long ifTime = 0;  // Time spent in the if block
@@ -388,10 +389,14 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         long rebuiltPartitionTime1 = 0;
         long rebuiltPartitionTime2 = 0;
         long dataCombination = System.nanoTime();
-        for (ECResponse[] ecResponses : partitionResponses.values())
-        {
 
+        final int shardSizeFinal = ShardSize;
+        final ReadResponse tmpFinal = tmp;
 
+        //for (ECResponse[] ecResponses : partitionResponses.values())
+        List<ReadResponse> rebuiltResponses = partitionResponses.values().parallelStream()
+                   .map(ecResponses -> {
+                       boolean IsEcDeccodeNeeded = false;
             if(!IsEcDeccodeNeeded)
             {
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
@@ -404,7 +409,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 }
             }
 
-            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * ShardSize);
+            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * shardSizeFinal);
 
             if (!IsEcDeccodeNeeded)
             {    long dataCombinationif = System.nanoTime();
@@ -434,7 +439,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     throw new RuntimeException(e);
                 }
 
-                ifTime += (System.nanoTime() - dataCombinationif);  // Add time spent in if block
+                //ifTime += (System.nanoTime() - dataCombinationif);  // Add time spent in if block
 
                 //logger.error("CombineResponseRange data combining NO EC took "+ (( System.nanoTime() - dataCombination) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
@@ -472,22 +477,27 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     throw new RuntimeException(e);
                 }
-                elseTime += (System.nanoTime() - dataCombinationelse);  // Add time spent in if block
+                //elseTime += (System.nanoTime() - dataCombinationelse);  // Add time spent in if block
                 // logger.error("CombineResponseRange data combining with DECODE took "+ (( System.nanoTime() - dataCombination2) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
 
-            long rebuiltPartitionsStart1 = System.nanoTime();
-            ReadResponse rebuilt = modifyCellValue(tmp, combined);
+            //long rebuiltPartitionsStart1 = System.nanoTime();
+            //ReadResponse rebuilt = modifyCellValue(tmp, combined);
+            return modifyCellValue(tmpFinal, combined);
+            }).collect(Collectors.toList());
+            //rebuiltPartitionTime1 += System.nanoTime() - rebuiltPartitionsStart1;
 
-            rebuiltPartitionTime1 += System.nanoTime() - rebuiltPartitionsStart1;
+            //long rebuiltPartitionsStart2 = System.nanoTime();
+            //rebuiltPartitions.add(rebuilt.makeIterator(command));
+            //rebuiltPartitionTime2 += System.nanoTime() - rebuiltPartitionsStart2;
+        // Merge all partitions into a single PartitionIterator
+        List<UnfilteredPartitionIterator> rebuiltPartitions = rebuiltResponses.stream()
+                                                                              .map(r -> r.makeIterator(command))
+                                                                              .collect(Collectors.toList());
 
-            long rebuiltPartitionsStart2 = System.nanoTime();
-            rebuiltPartitions.add(rebuilt.makeIterator(command));
-            rebuiltPartitionTime2 += System.nanoTime() - rebuiltPartitionsStart2;
-        }
         //logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
         //logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-        logger.error("CombineResponseRange  modifyCellValue took "+ (rebuiltPartitionTime1 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        //logger.error("CombineResponseRange  modifyCellValue took "+ (rebuiltPartitionTime1 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
         //logger.error("CombineResponseRange data rebuiltPartitionTime 2 "+ (rebuiltPartitionTime2 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
         logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
 
