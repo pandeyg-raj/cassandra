@@ -375,10 +375,10 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         // check if all "DATA" codes available
         long ifTime = 0;  // Time spent in the if block
         long elseTime = 0;  // Time spent in the else block
-
+        long dataCombination = System.nanoTime();
         for (ECResponse[] ecResponses : partitionResponses.values())
         {
-            long dataCombination = System.nanoTime();
+
 
             if(!IsEcDeccodeNeeded)
             {
@@ -395,7 +395,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * ShardSize);
 
             if (!IsEcDeccodeNeeded)
-            {
+            {    long dataCombinationif = System.nanoTime();
 
                 try
                 {
@@ -422,13 +422,13 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     throw new RuntimeException(e);
                 }
 
-                ifTime += (System.nanoTime() - dataCombination);  // Add time spent in if block
+                ifTime += (System.nanoTime() - dataCombinationif);  // Add time spent in if block
 
                 //logger.error("CombineResponseRange data combining NO EC took "+ (( System.nanoTime() - dataCombination) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
             else
             {
-
+                long dataCombinationelse = System.nanoTime();
                 // Need to decode missing shards
                 int shardSize = ecResponses[0].getCodeLength();
                 byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][shardSize];
@@ -460,7 +460,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     throw new RuntimeException(e);
                 }
-                elseTime += (System.nanoTime() - dataCombination);  // Add time spent in if block
+                elseTime += (System.nanoTime() - dataCombinationelse);  // Add time spent in if block
                 // logger.error("CombineResponseRange data combining with DECODE took "+ (( System.nanoTime() - dataCombination2) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
             ReadResponse rebuilt = modifyCellValue(tmp, combined);
@@ -468,6 +468,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         }
         logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
         logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
 
 
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
