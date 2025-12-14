@@ -373,8 +373,13 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         boolean IsEcDeccodeNeeded = false;
 
         // check if all "DATA" codes available
+        long ifTime = 0;  // Time spent in the if block
+        long elseTime = 0;  // Time spent in the else block
+
         for (ECResponse[] ecResponses : partitionResponses.values())
         {
+            long dataCombination = System.nanoTime();
+
             if(!IsEcDeccodeNeeded)
             {
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
@@ -391,7 +396,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
             if (!IsEcDeccodeNeeded)
             {
-                long dataCombination = System.nanoTime();
+
                 try
                 {
                     /*StringBuilder sb = new StringBuilder();
@@ -416,11 +421,14 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     throw new RuntimeException(e);
                 }
-                logger.error("CombineResponseRange data combining NO EC took "+ (( System.nanoTime() - dataCombination) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+
+                ifTime += (System.nanoTime() - dataCombination);  // Add time spent in if block
+
+                //logger.error("CombineResponseRange data combining NO EC took "+ (( System.nanoTime() - dataCombination) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
             else
             {
-                long dataCombination = System.nanoTime();
+
                 // Need to decode missing shards
                 int shardSize = ecResponses[0].getCodeLength();
                 byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][shardSize];
@@ -452,9 +460,11 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     throw new RuntimeException(e);
                 }
-                logger.error("CombineResponseRange data combining with DECODE took "+ (( System.nanoTime() - dataCombination) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+                elseTime += (System.nanoTime() - dataCombination);  // Add time spent in if block
+                // logger.error("CombineResponseRange data combining with DECODE took "+ (( System.nanoTime() - dataCombination2) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
             }
-
+            logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+            logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
             ReadResponse rebuilt = modifyCellValue(tmp, combined);
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
