@@ -369,17 +369,20 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         // Now reconstruct values for all partitions
         List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
         ErasureCode decoder = new ErasureCode();
+        boolean IsEcDeccodeNeeded = false;
 
         // check if all "DATA" codes available
         for (ECResponse[] ecResponses : partitionResponses.values())
         {
-            boolean IsEcDeccodeNeeded = false;
-            for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+            if(!IsEcDeccodeNeeded)
             {
-                if (!ecResponses[i].getIsCodeAvailable())
+                for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
                 {
-                    IsEcDeccodeNeeded = true;
-                    break;
+                    if (!ecResponses[i].getIsCodeAvailable())
+                    {
+                        IsEcDeccodeNeeded = true;
+                        break;
+                    }
                 }
             }
 
