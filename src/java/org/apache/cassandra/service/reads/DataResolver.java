@@ -433,11 +433,11 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 try
                 {
                     long startDecoding = System.nanoTime();
-                    byte [] combinedValue = new ErasureCode().MyDecodeByteBuffer(decodeMatrix, isAvailable,
+                    byte[] out = combined.array();
+                    new ErasureCode().MyDecodeByteBuffer(out,decodeMatrix, isAvailable,
                                                                shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
-                    combined.clear();                 // reset position=0, limit=capacity
-                    combined.put(combinedValue);       // copy decoded result
-                    combined.flip();
+                    combined.position(0);
+                    combined.limit(out.length);    // reset position=0, limit=capacity
                     LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
                 }
                 catch (Exception e)
