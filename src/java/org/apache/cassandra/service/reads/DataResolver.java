@@ -558,7 +558,6 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 long dataCombinationelse = System.nanoTime();
                 // Need to decode missing shards
                 byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
-                boolean[] isAvailable = new boolean[ECConfig.TOTAL_SHARDS];
 
                 for (int i = 0; i < ecResponses.length; i++)
                 {
@@ -568,7 +567,10 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                                          ? ecResponses[i].getEcCode()
                                          : ecResponses[i].getEcCodeParity();
                         buf.get(decodeMatrix[ecResponses[i].getEcCodeIndex()]);
-                        isAvailable[i] = true;
+                    }
+                    else // code not available , allocate empty space
+                    {
+                        decodeMatrix[i] = new byte[ShardSize];
                     }
                 }
 
@@ -576,7 +578,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
-                    decoder.MyDecodeByteBuffer(out, decodeMatrix, isAvailable,
+                    decoder.MyDecodeByteBuffer(out, decodeMatrix, isCodeavailable,
                                                ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
                     combined.limit(out.length);    // reset position=0, limit=capacity
