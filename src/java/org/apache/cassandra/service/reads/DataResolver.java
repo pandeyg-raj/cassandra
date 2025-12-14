@@ -234,6 +234,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         Map<DecoratedKey, ECResponse[]> partitionResponses = new HashMap<>();
 
         int ShardSize =-1;
+        final ColumnMetadata ecColMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+
         for (Message<ReadResponse> message : snapshot)
         {
             //String messageSender = message.from().getHostAddress(false);
@@ -283,7 +285,6 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     // todo: the entire row is read for the sake of development
                     // future improvement could be made
-                    ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                     try
                     {
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
