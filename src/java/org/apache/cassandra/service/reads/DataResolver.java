@@ -147,7 +147,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
     }
 
 
-    public ReadResponse modifyCellValue(ReadResponse originalResponse,String encoded_value) {
+    public ReadResponse modifyCellValue(ReadResponse originalResponse,ByteBuffer encoded_value) {
 
 
         // Extract the data from the original response
@@ -176,7 +176,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     for (Cell<?> cell : row.cells()) {
                         if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
                             // Modify target cell
-                            rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
+                            rowBuilder.addCell(cell.withUpdatedValue(encoded_value));
                         } else {
                             // Copy existing cells
                             rowBuilder.addCell(cell);
@@ -304,7 +304,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                             {
                                 Finalbuffer.position(1);
                                 //logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
-                                ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                                ReadResponse tmpp = modifyCellValue(tmp,Finalbuffer);// should use trim() mostly Yes?
                                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
 
                             }
@@ -382,7 +382,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 }
             }
 
-            String combinedValue = "";
+            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * ShardSize);
 
             if (!IsEcDeccodeNeeded)
             {
@@ -395,15 +395,15 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
                     */
 
-                    byte[] combinedBytes = new byte[ECConfig.DATA_SHARDS * ShardSize];
-                    int offset = 0;
+
+
                     for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
-                        ByteBuffer shard = ecResponses[i].getEcCode().duplicate(); // safe copy
-                        shard.position(0); // ensure reading full shard
-                        shard.get(combinedBytes, offset, ShardSize);
-                        offset += ShardSize;
+                        ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
+                        shard.position(0);              // ensure full shard
+                        combined.put(shard);            // bulk copy
                     }
-                    combinedValue = new String(combinedBytes, StandardCharsets.UTF_8);
+
+                    combined.flip(); // prepare for read
 
                 }
                 catch (Exception e)
@@ -433,8 +433,11 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 try
                 {
                     long startDecoding = System.nanoTime();
-                    combinedValue = new ErasureCode().MyDecode(decodeMatrix, isAvailable,
+                    byte [] combinedValue = new ErasureCode().MyDecodeByteBuffer(decodeMatrix, isAvailable,
                                                                shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                    combined.clear();                 // reset position=0, limit=capacity
+                    combined.put(combinedValue);       // copy decoded result
+                    combined.flip();
                     LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
                 }
                 catch (Exception e)
@@ -443,7 +446,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 }
             }
 
-            ReadResponse rebuilt = modifyCellValue(tmp, combinedValue);
+            ReadResponse rebuilt = modifyCellValue(tmp, combined);
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);

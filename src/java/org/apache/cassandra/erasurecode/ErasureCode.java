@@ -94,6 +94,27 @@ public class ErasureCode
         return shards;
     }
 
+    public  byte[]  MyDecodeByteBuffer (byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
+    {
+        int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
+        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
+
+        reedSolomon.decodeMissing(shards, shardPresent, 0, shardSize);
+
+
+        byte [] NewallBytes = new byte [shardSize * DATA_SHARDS];
+
+        //long startTime = System.nanoTime();
+
+        for (int i = 0; i < DATA_SHARDS; i++) {
+            System.arraycopy(shards[i], 0, NewallBytes, shardSize * i, shardSize);
+        }
+        //long stopTime = System.nanoTime();
+        //System.out.println((stopTime - startTime)/1000);
+
+        return NewallBytes;
+        // return new String( NewallBytes, StandardCharsets.UTF_8).trim();
+    }
     public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
@@ -112,7 +133,7 @@ public class ErasureCode
         //long stopTime = System.nanoTime();
         //System.out.println((stopTime - startTime)/1000);
 
-        //return NewallBytes;
+       // return NewallBytes;
          return new String( NewallBytes, StandardCharsets.UTF_8).trim();
     }
 }
