@@ -221,7 +221,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
     public PartitionIterator myCombineResponseRange()
     {
-        long startCombineResponseRange = System.nanoTime();
+        
         // array to keep track which code part is available
         boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
         //boolean IswholeValue = false;
@@ -238,7 +238,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         int ShardSize =-1;
         final ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
         final long nowInSec = command.nowInSec();
-
+        long datacollection = System.nanoTime();
         for (Message<ReadResponse> message : snapshot)
         {
             //String messageSender = message.from().getHostAddress(false);
@@ -361,8 +361,9 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 //partitionResponses.add(ecResponses);
             }
         }
-
-
+        
+        logger.error("CombineResponseRange data collection took "+ (( System.nanoTime() - datacollection) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        long dataCombination = System.nanoTime();
         // verify if decoding needed
         // no decodign needed if all data fragment present, just combine and return
         // no decoding needed/possible if whole data presend or not enough codes available
@@ -454,8 +455,10 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             ReadResponse rebuilt = modifyCellValue(tmp, combined);
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
+        logger.error("CombineResponseRange data combining took "+ (( System.nanoTime() - dataCombination) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
-        logger.error("CombineResponseRange  took "+ (( System.nanoTime() - startCombineResponseRange) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
+        logger.error("CombineResponseRange  total took "+ (( System.nanoTime() - datacollection) / 1000000) +"us for partitions/rows count" + partitionResponses.size() );
                             
         return UnfilteredPartitionIterators.filter(merged, nowInSec);
     }
