@@ -362,7 +362,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             }
         }
         
-        long dataCombination = System.nanoTime();
+
         // verify if decoding needed
         // no decodign needed if all data fragment present, just combine and return
         // no decoding needed/possible if whole data presend or not enough codes available
@@ -391,6 +391,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
             if (!IsEcDeccodeNeeded)
             {
+                long dataCombination = System.nanoTime();
                 try
                 {
                     /*StringBuilder sb = new StringBuilder();
@@ -419,6 +420,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             }
             else
             {
+                long dataCombination = System.nanoTime();
                 // Need to decode missing shards
                 int shardSize = ecResponses[0].getCodeLength();
                 byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][shardSize];
