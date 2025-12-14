@@ -455,7 +455,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
-        logger.error("CombineResponseRange  took "+ (( System.nanoTime() - startCombineResponseRange) / 1000) +"us for partitions/rows count" + partitionResponses.size() ;
+        logger.error("CombineResponseRange  took "+ (( System.nanoTime() - startCombineResponseRange) / 1000) +"us for partitions/rows count" + partitionResponses.size() );
                             
         return UnfilteredPartitionIterators.filter(merged, nowInSec);
     }
