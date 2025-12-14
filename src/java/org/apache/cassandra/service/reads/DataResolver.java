@@ -221,6 +221,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
     public PartitionIterator myCombineResponseRange()
     {
+        long startCombineResponseRange = System.nanoTime();
         // array to keep track which code part is available
         boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
         //boolean IswholeValue = false;
@@ -454,6 +455,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
+        logger.error("CombineResponseRange  took "+ (( System.nanoTime() - startCombineResponseRange) / 1000) +"us for partitions/rows count" + partitionResponses.size() ;
+                            
         return UnfilteredPartitionIterators.filter(merged, nowInSec);
     }
 
