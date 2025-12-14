@@ -18,6 +18,7 @@
 package org.apache.cassandra.service.reads;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -234,7 +235,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         Map<DecoratedKey, ECResponse[]> partitionResponses = new HashMap<>();
 
         int ShardSize =-1;
-        final ColumnMetadata ecColMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        final ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        final long nowInSec = command.nowInSec();
 
         for (Message<ReadResponse> message : snapshot)
         {
@@ -265,7 +267,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             }
             // get the partition iterator corresponding to the
             // current data response
-            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), command.nowInSec());
+            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), nowInSec);
 
             // get the z value column
             while(pi.hasNext())
@@ -386,10 +388,22 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             {
                 try
                 {
-                    StringBuilder sb = new StringBuilder();
+                    /*StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
                         sb.append(ByteBufferUtil.string(ecResponses[i].getEcCode()));
                     combinedValue = sb.toString().trim();
+
+                    */
+                    int totalLength = ECConfig.DATA_SHARDS * ShardSize;
+                    byte[] combinedBytes = new byte[totalLength];
+                    int offset = 0;
+                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+                        ByteBuffer shard = ecResponses[i].getEcCode();
+                        shard.get(combinedBytes, offset, shard.remaining());
+                        offset += shard.remaining();
+                    }
+                    combinedValue = new String(combinedBytes, StandardCharsets.UTF_8);
+
                 }
                 catch (Exception e)
                 {
@@ -432,7 +446,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             rebuiltPartitions.add(rebuilt.makeIterator(command));
         }
         UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
-        return UnfilteredPartitionIterators.filter(merged, command.nowInSec());
+        return UnfilteredPartitionIterators.filter(merged, nowInSec);
     }
 
     private boolean usesReplicaFilteringProtection()
