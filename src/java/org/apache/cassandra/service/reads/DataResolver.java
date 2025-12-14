@@ -156,6 +156,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
         // Use a builder to collect the modified partitions
         ReadResponse resp = null;
+        long mcvStart = System.nanoTime();
         while (partitions.hasNext()) {
             try (RowIterator rows = partitions.next()) {
                 TableMetadata tableMetadata  = rows.metadata();
@@ -197,6 +198,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 throw new RuntimeException(e);
             }
         }
+        logger.error("mcv took "+ (((System.nanoTime() - mcvStart)) / 1000000) +"ms for partitions/rows count" );
+
         if(resp==null)
         {
             logger.error("Problem");
@@ -475,10 +478,10 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             rebuiltPartitions.add(rebuilt.makeIterator(command));
             rebuiltPartitionTime2 += System.nanoTime() - rebuiltPartitionsStart2;
         }
-        logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-        logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-        logger.error("CombineResponseRange data rebuiltPartitionTime 1"+ (rebuiltPartitionTime1 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-        logger.error("CombineResponseRange data rebuiltPartitionTime 2"+ (rebuiltPartitionTime2 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        //logger.error("CombineResponseRange data combining NO   DECODE took "+ (ifTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        //logger.error("CombineResponseRange data combining with DECODE took "+ (elseTime / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        logger.error("CombineResponseRange  modifyCellValue took "+ (rebuiltPartitionTime1 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        //logger.error("CombineResponseRange data rebuiltPartitionTime 2 "+ (rebuiltPartitionTime2 / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
         logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
 
 
