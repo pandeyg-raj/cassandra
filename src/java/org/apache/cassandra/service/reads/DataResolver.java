@@ -212,7 +212,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         ColumnMetadata tagMetadata  = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
         if (tagMetadata != null && command.columnFilter().queriedColumns().contains(tagMetadata))
         {
-            logger.error("Column "+ECConfig.EC_COLUMN+" is requested in read");
+            //logger.error("Column "+ECConfig.EC_COLUMN+" is requested in read");
             return true;
         }
         //logger.error("Column "+ECConfig.EC_COLUMN+" is NOT requested in read");
