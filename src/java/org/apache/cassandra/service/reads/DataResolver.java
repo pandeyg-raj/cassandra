@@ -488,7 +488,6 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         long rebuiltPartitionTime2 = 0;
         long dataCombination = System.nanoTime();
 
-        final int shardSizeFinal = ShardSize;
         final ReadResponse tmpFinal = tmp;
 
         boolean IsEcDeccodeNeeded = false;
@@ -514,7 +513,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
             ECResponse[] ecResponses = er.getValue();
 
-            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * shardSizeFinal);
+            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * ShardSize);
 
             if (!IsEcDeccodeNeededFinal)
             {
@@ -530,9 +529,9 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     {
                         ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
                         shard.position(0);              // ensure full shard
+                        logger.error("Remaining space in combined: {} Shard size: {}", combined.remaining(), shard.remaining());
                         combined.put(shard);            // bulk copy
                     }
-
                     combined.flip(); // prepare for read
                 }
                 catch (Exception e)
