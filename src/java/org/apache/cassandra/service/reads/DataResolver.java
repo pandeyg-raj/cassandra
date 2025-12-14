@@ -147,75 +147,173 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                                      repairedDataTracker);
     }
 
-
     public ReadResponse modifyCellValue(ReadResponse originalResponse,ByteBuffer encoded_value) {
 
 
+
         // Extract the data from the original response
+
         PartitionIterator partitions = UnfilteredPartitionIterators.filter(originalResponse.makeIterator(command), command.nowInSec());
+
         // Create a new PartitionIterator to hold the modified data
 
+
+
         // Use a builder to collect the modified partitions
+
         ReadResponse resp = null;
-        long mcvStart = System.nanoTime();
-        ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
-        List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+
         while (partitions.hasNext()) {
+
             try (RowIterator rows = partitions.next()) {
+
                 TableMetadata tableMetadata  = rows.metadata();
+
                 DecoratedKey partitionKey = rows.partitionKey();
+
                 RegularAndStaticColumns clm = rows.columns();
+
+
 
                 PartitionUpdate.Builder builder =  new PartitionUpdate.Builder(tableMetadata, partitionKey, clm, 1, false);
 
+
+
                 // Traverse rows and modify the target cell
+
                 while (rows.hasNext()) {
+
                     Row row = rows.next();
+
                     Row.Builder rowBuilder = BTreeRow.sortedBuilder();
 
+
+
                     // Copy clustering
+
                     rowBuilder.newRow(row.clustering());
 
+
+
                     // Traverse cells
+
                     for (Cell<?> cell : row.cells()) {
-                        //if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
-                        if (cell.column() == colMeta) {
+
+                        if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
+
                             // Modify target cell
+
                             rowBuilder.addCell(cell.withUpdatedValue(encoded_value));
+
                         } else {
+
                             // Copy existing cells
+
                             rowBuilder.addCell(cell);
+
                         }
+
                     }
 
-                    // Add modified row to partition builder
-                    builder.add(rowBuilder.build());
-                }
-                PartitionUpdate partitionUpdate = builder.build();
-                UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
-                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
-                //rebuiltPartitions.add(new SingletonUnfilteredPartitionIterator(rowIterator));
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-                throw new RuntimeException(e);
-            }
-        }
-        // Merge all partitions into a single ReadResponse
-        //UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
-        //resp = ReadResponse.createSimpleDataResponse(merged, command.columnFilter());
 
-        logger.error("mcv took "+ (((System.nanoTime() - mcvStart)) / 1000000) +"ms for partitions/rows count" );
+
+                    // Add modified row to partition builder
+
+                    builder.add(rowBuilder.build());
+
+                }
+
+                PartitionUpdate partitionUpdate = builder.build();
+
+                UnfilteredRowIterator rowIterator = partitionUpdate.unfilteredIterator();
+
+                resp = ReadResponse.createSimpleDataResponse(new SingletonUnfilteredPartitionIterator(rowIterator), command.columnFilter());
+
+
+
+            }
+
+            catch (Exception e)
+
+            {
+
+                e.printStackTrace();
+
+                throw new RuntimeException(e);
+
+            }
+
+        }
 
         if(resp==null)
+
         {
+
             logger.error("Problem");
+
         }
+
         // Create a new ReadResponse with modified data
+
         return resp;
 
     }
+    public ReadResponse modifyCellValues(ReadResponse originalResponse,
+                                         Map<DecoratedKey, ByteBuffer> decodedValues) {
+        final ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+        final long nowInSec = command.nowInSec();
+
+        // Iterator over original partitions
+        PartitionIterator partitions =
+        UnfilteredPartitionIterators.filter(originalResponse.makeIterator(command), nowInSec);
+
+        List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+
+        while (partitions.hasNext()) {
+            RowIterator partitionIter = partitions.next();
+            DecoratedKey pk = partitionIter.partitionKey();
+            ByteBuffer newValue = decodedValues.get(pk);
+
+            // Always rebuild using PartitionUpdate.Builder
+            PartitionUpdate.Builder builder =
+            new PartitionUpdate.Builder(partitionIter.metadata(),
+                                        pk,
+                                        partitionIter.columns(),
+                                        1,
+                                        false);
+
+            try (RowIterator rows = partitionIter) { // partitionIter implements AutoCloseable
+                while (rows.hasNext()) {
+                    Row row = rows.next();
+                    Row.Builder rb = BTreeRow.sortedBuilder();
+                    rb.newRow(row.clustering());
+
+                    // Traverse cells
+                    for (Cell<?> cell : row.cells()) {
+                        if (cell.column() == colMeta && newValue != null) {
+                            // Update EC column
+                            rb.addCell(cell.withUpdatedValue(newValue.duplicate()));
+                        } else {
+                            rb.addCell(cell); // Copy other cells
+                        }
+                    }
+
+                    builder.add(rb.build());
+                }
+            }
+
+            PartitionUpdate partitionUpdate = builder.build();
+            rebuiltPartitions.add(
+            new SingletonUnfilteredPartitionIterator(partitionUpdate.unfilteredIterator())
+            );
+        }
+
+        return ReadResponse.createSimpleDataResponse(
+        UnfilteredPartitionIterators.concat(rebuiltPartitions),
+        command.columnFilter());
+    }
+
+
 
     public boolean isMyRead()
     {
@@ -410,9 +508,11 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         }
         final boolean IsEcDeccodeNeededFinal = IsEcDeccodeNeeded;
 
-        //for (ECResponse[] ecResponses : partitionResponses.values())
-        List<ReadResponse> rebuiltResponses = partitionResponses.values().parallelStream()
-                   .map(ecResponses -> {
+        Map<DecoratedKey, ByteBuffer> decodedValues = new HashMap<>();
+        for (Map.Entry<DecoratedKey, ECResponse[]> er : partitionResponses.entrySet())
+        {
+
+            ECResponse[] ecResponses = er.getValue();
 
             ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * shardSizeFinal);
 
@@ -426,20 +526,19 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     combinedValue = sb.toString().trim();
                     */
 
-                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+                    {
                         ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
                         shard.position(0);              // ensure full shard
                         combined.put(shard);            // bulk copy
                     }
 
                     combined.flip(); // prepare for read
-
                 }
                 catch (Exception e)
                 {
                     throw new RuntimeException(e);
                 }
-
             }
             else
             {
@@ -465,8 +564,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
-                    decoder.MyDecodeByteBuffer(out,decodeMatrix, isAvailable,
-                                                               shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                    decoder.MyDecodeByteBuffer(out, decodeMatrix, isAvailable,
+                                               shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
                     combined.limit(out.length);    // reset position=0, limit=capacity
                     LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
@@ -476,19 +575,16 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     throw new RuntimeException(e);
                 }
             }
+            decodedValues.put(er.getKey(), combined);
+        }
 
-            //ReadResponse rebuilt = modifyCellValue(tmp, combined);
-            return modifyCellValue(tmpFinal, combined);
-            }).collect(Collectors.toList());
+        ReadResponse rebuilt = modifyCellValues(tmp, decodedValues);
 
-        // Merge all partitions into a single PartitionIterator
-        List<UnfilteredPartitionIterator> rebuiltPartitions = rebuiltResponses.stream()
-                                                                              .map(r -> r.makeIterator(command))
-                                                                              .collect(Collectors.toList());
         logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
-        UnfilteredPartitionIterator merged = UnfilteredPartitionIterators.concat(rebuiltPartitions);
 
-        return UnfilteredPartitionIterators.filter(merged, nowInSec);
+        return UnfilteredPartitionIterators.filter(
+        rebuilt.makeIterator(command),
+        nowInSec);
     }
 
     private boolean usesReplicaFilteringProtection()
