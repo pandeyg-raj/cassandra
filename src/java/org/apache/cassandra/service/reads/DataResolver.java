@@ -435,7 +435,9 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                         int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
-                        ShardSize = coded_valueLength;
+                        if (ShardSize < coded_valueLength) {
+			    ShardSize = coded_valueLength;
+			}
 
                         if(codeIndex < ECConfig.DATA_SHARDS) // data shard
                         {
@@ -529,13 +531,25 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     {
                         ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
                         shard.position(0);              // ensure full shard
-                        logger.error("Remaining space in combined: {} Shard size: {}", combined.remaining(), shard.remaining());
-                        combined.put(shard);            // bulk copy
+				try{
+					combined.put(shard);            // bulk copy
+				}
+				catch (Exception e) {
+				   logger.error(
+				        "BufferOverflowException: combined[pos={}, lim={}, cap={}], shard[pos={}, lim={}, cap={}]",
+				        combined.position(), combined.limit(), combined.capacity(),
+				        shard.position(), shard.limit(), shard.capacity(),
+				        e
+				    );
+				    throw new RuntimeException(e);
+
+				}
                     }
                     combined.flip(); // prepare for read
                 }
                 catch (Exception e)
                 {
+
                     throw new RuntimeException(e);
                 }
             }
@@ -543,8 +557,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
             {
                 long dataCombinationelse = System.nanoTime();
                 // Need to decode missing shards
-                int shardSize = ecResponses[0].getCodeLength();
-                byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][shardSize];
+                byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
                 boolean[] isAvailable = new boolean[ECConfig.TOTAL_SHARDS];
 
                 for (int i = 0; i < ecResponses.length; i++)
@@ -564,7 +577,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
                     decoder.MyDecodeByteBuffer(out, decodeMatrix, isAvailable,
-                                               shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                                               ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
                     combined.limit(out.length);    // reset position=0, limit=capacity
                     LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
