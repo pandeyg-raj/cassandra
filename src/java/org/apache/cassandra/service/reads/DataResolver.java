@@ -580,7 +580,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
         ReadResponse rebuilt = modifyCellValues(tmp, decodedValues);
 
-        logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+        //logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
 
         return UnfilteredPartitionIterators.filter(
         rebuilt.makeIterator(command),
