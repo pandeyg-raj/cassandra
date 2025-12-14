@@ -368,6 +368,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
         // Now reconstruct values for all partitions
         List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+        ErasureCode decoder = new ErasureCode();
 
         // check if all "DATA" codes available
         for (ECResponse[] ecResponses : partitionResponses.values())
@@ -434,7 +435,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
-                    new ErasureCode().MyDecodeByteBuffer(out,decodeMatrix, isAvailable,
+                    decoder.MyDecodeByteBuffer(out,decodeMatrix, isAvailable,
                                                                shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
                     combined.limit(out.length);    // reset position=0, limit=capacity
