@@ -18,6 +18,7 @@
 package org.apache.cassandra.service.reads;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
@@ -292,8 +293,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
-                        ShardSize = coded_valueLength;
-
+                        if (ShardSize < coded_valueLength) {
+                            ShardSize = coded_valueLength;
+                        }
                         if(codeIndex < ECConfig.DATA_SHARDS) // data shard
                         {
 
@@ -354,16 +356,33 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 // just combine and return
                 //logger.info("Read Returning: All data shartd available ");
 
+                /*
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
 
                     encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCode()); //ecResponses[i].getEcCode();
 
                     //logger.info("Combining value:  " + encoded_value);
                 }
-                //logger.info("No decoding needed Combining value:  " + encoded_value);
 
+                //logger.info("No decoding needed Combining value:  " + encoded_value);
                 tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
 
+                */
+                // changes for wiki workload , but should be fine for all
+                byte[] allDataBytes = new byte[ECConfig.DATA_SHARDS*ShardSize];
+                int offset = 0;
+
+                // Copy each shard's bytes into the array
+                for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
+                    ByteBuffer bb = ecResponses[i].getEcCode();
+                    int len = bb.remaining();
+                    bb.get(allDataBytes, offset, len);
+                    offset += len;
+                }
+                // Convert the concatenated byte array to UTF-8 string once
+                encoded_value = new String(allDataBytes, StandardCharsets.UTF_8).trim();
+                // Use it in modifyCellValue
+                tmpp = modifyCellValue(tmp, encoded_value);
                 try
                 {
                     return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
