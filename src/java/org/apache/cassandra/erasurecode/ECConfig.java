@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,6 +78,26 @@ public class ECConfig
     */
 
     public  static int wholeValueFound = 0;
+
+    // Case 1: EC fragment replaced existing full value in Memtable (signal arrived before flush)
+    // Case 2: EC fragment inserted as new Memtable entry (original already flushed to SSTable)
+    public static final LongAdder case1Count = new LongAdder();
+    public static final LongAdder case2Count = new LongAdder();
+
+    public static String getCaseStats() {
+        long c1 = case1Count.sum();
+        long c2 = case2Count.sum();
+        long total = c1 + c2;
+        double pct1 = total == 0 ? 0.0 : 100.0 * c1 / total;
+        double pct2 = total == 0 ? 0.0 : 100.0 * c2 / total;
+        return String.format("case1(memtable_replace)=%d(%.1f%%) case2(sstable_insert)=%d(%.1f%%) total=%d",
+                             c1, pct1, c2, pct2, total);
+    }
+
+    public static void resetCaseCounts() {
+        case1Count.reset();
+        case2Count.reset();
+    }
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
     //public  static AtomicInteger TotalSignalReceived ;
     //public  static AtomicInteger TotalReplicateWriteReceived ;

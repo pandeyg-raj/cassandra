@@ -45,6 +45,8 @@ public interface StorageServiceMBean extends NotificationEmitter
      */
     public String getBreakdownTime();
     public String resetBreakdownTime();
+    public String getECWriteStats();
+    public void resetECWriteStats();
     /**
      * Retrieve the list of live nodes in the cluster, where "liveness" is
      * determined by the failure detector of the node being queried.

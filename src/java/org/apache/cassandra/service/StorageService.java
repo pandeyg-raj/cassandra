@@ -340,6 +340,13 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         return LatencyRecorder.resetBreakdownTime();
     }
 
+    public String getECWriteStats() {
+        return ECConfig.getCaseStats();
+    }
+    public void resetECWriteStats() {
+        ECConfig.resetCaseCounts();
+    }
+
     /* This abstraction maintains the token/endpoint metadata information */
     private TokenMetadata tokenMetadata = new TokenMetadata();
 

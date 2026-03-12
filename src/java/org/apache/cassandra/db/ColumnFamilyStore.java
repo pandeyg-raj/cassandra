@@ -110,6 +110,7 @@ import org.apache.cassandra.dht.IPartitioner;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.dht.Splitter;
 import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.exceptions.InvalidRequestException;
@@ -1504,6 +1505,12 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
             // to update.
             if(timeDelta < Long.MAX_VALUE)
                 metric.colUpdateTimeDeltaHistogram.update(Math.min(18165375903306L, timeDelta));
+            if (context.isEcSignalMuattion) {
+                if (timeDelta < Long.MAX_VALUE)
+                    ECConfig.case1Count.increment(); // EC fragment replaced existing Memtable cell (Case 1)
+                else
+                    ECConfig.case2Count.increment(); // EC fragment inserted new entry, original in SSTable (Case 2)
+            }
         }
         catch (RuntimeException e)
         {
