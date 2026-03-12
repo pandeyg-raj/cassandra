@@ -1506,10 +1506,11 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean, Memtable.Owner
             if(timeDelta < Long.MAX_VALUE)
                 metric.colUpdateTimeDeltaHistogram.update(Math.min(18165375903306L, timeDelta));
             if (context.isEcSignalMuattion) {
-                if (timeDelta < Long.MAX_VALUE)
-                    ECConfig.case1Count.increment(); // EC fragment replaced existing Memtable cell (Case 1)
-                else
+                if (timeDelta == 0)
+                    ECConfig.case1Count.increment(); // EC fragment replaced same-timestamp Memtable cell (Case 1)
+                else if (timeDelta == Long.MAX_VALUE)
                     ECConfig.case2Count.increment(); // EC fragment inserted new entry, original in SSTable (Case 2)
+                // timeDelta > 0 and < MAX_VALUE: concurrent write race, not counted
             }
         }
         catch (RuntimeException e)
