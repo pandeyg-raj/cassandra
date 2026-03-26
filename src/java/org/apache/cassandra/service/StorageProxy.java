@@ -971,7 +971,10 @@ public class StorageProxy implements StorageProxyMBean
         try
         {
            //logger.error(" signal muation");
-           performWrite(mutations.get(0), consistencyLevel, localDataCenter, standardWritePerformer, null, WriteType.SIMPLE, requestTime);
+           // performWrite(mutations.get(0), consistencyLevel, localDataCenter, standardWritePerformer, null, WriteType.SIMPLE, requestTime);
+
+            // dont care about ec signal response consistency.
+            performWrite(mutations.get(0), consistencyLevel.ANY, localDataCenter, standardWritePerformer, null, WriteType.SIMPLE, requestTime);
 
         }
         catch (WriteTimeoutException|WriteFailureException ex)
@@ -1246,7 +1249,8 @@ public class StorageProxy implements StorageProxyMBean
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
                         {
-                            e.printStackTrace();
+                            logger.error("EC signal send failed for key {}", mutations.get(0).key(), e);
+
                         }
                     }
                 }
@@ -1761,6 +1765,8 @@ public class StorageProxy implements StorageProxyMBean
                 {
                     // dont care about signal mutation response
                     MessagingService.instance().send(message, destination.endpoint());
+                    responseHandler.onResponse(message); // manually satisfy ack for fire-and-forget
+
                     //ECConfig.TotalSignalSent.incrementAndGet();
                 }
                 else
