@@ -1765,7 +1765,7 @@ public class StorageProxy implements StorageProxyMBean
                 {
                     // dont care about signal mutation response
                     MessagingService.instance().send(message, destination.endpoint());
-                    responseHandler.onResponse(message); // manually satisfy ack for fire-and-forget
+                    responseHandler.onResponse(null); // manually satisfy ack for fire-and-forget; // null = "local write satisfied",
 
                     //ECConfig.TotalSignalSent.incrementAndGet();
                 }
