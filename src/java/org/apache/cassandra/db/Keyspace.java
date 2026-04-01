@@ -347,7 +347,7 @@ public class Keyspace
         this.schema = schema;
         metadata = schema.getKeyspaceMetadata(keyspaceName);
         assert metadata != null : "Unknown keyspace " + keyspaceName;
-        
+
         if (metadata.isVirtual())
             throw new IllegalStateException("Cannot initialize Keyspace with virtual metadata " + keyspaceName);
         createReplicationStrategy(metadata);
@@ -487,7 +487,7 @@ public class Keyspace
     }
 
     public Future<?> applyFuture(Mutation mutation, boolean writeCommitLog, boolean updateIndexes, boolean isDroppable,
-                                            boolean isDeferrable)
+                                 boolean isDeferrable)
     {
         return applyInternal(mutation, writeCommitLog, updateIndexes, isDroppable, isDeferrable, new AsyncPromise<>());
     }
@@ -533,21 +533,21 @@ public class Keyspace
      * @param isDeferrable   true if caller is not waiting for future to complete, so that future may be deferred
      */
     private Future<?> applyInternal(final Mutation mutation,
-                                               final boolean makeDurable,
-                                               boolean updateIndexes,
-                                               boolean isDroppable,
-                                               boolean isDeferrable,
-                                               Promise<?> future)
+                                    final boolean makeDurable,
+                                    boolean updateIndexes,
+                                    boolean isDroppable,
+                                    boolean isDeferrable,
+                                    Promise<?> future)
     {
-        
-        if(IsRMWSignalMutation(mutation))
-        {
+
+       // if(IsRMWSignalMutation(mutation))
+        //{
             //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
             // updateIndexes, isDroppable,isDeferrable, future));
-            return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
+          //  return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
 
-        }
-        
+        //}
+
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
@@ -673,6 +673,82 @@ public class Keyspace
 
                 cfs.getWriteHandler().write(upd, ctx, updateIndexes);
 
+                // NoEcSignal: simulate replica EC work without signal network round-trip.
+                // Does the local read (same as signal path) but skips encoding - just writes
+                // back 1/k of the raw value to the same key/timestamp.
+                if (!mutation.isEcSignalMuattion)
+                {
+                    Row rowData = upd.getRow(Clustering.EMPTY);
+                    if (rowData != null)
+                    {
+                        for (Cell cell : rowData.cells())
+                        {
+                            if (cell.column().name.toString().equals(ECConfig.EC_COLUMN))
+                            {
+                                byte firstByte = cell.buffer().get();
+                                cell.buffer().rewind();
+                                if (firstByte == 0) // original replicated write
+                                {
+                                    final TableMetadata tableMetadata = upd.metadata();
+                                    final long ts = upd.lastRow()
+                                                       .getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)))
+                                                       .timestamp();
+                                    final boolean finalMakeDurable = makeDurable;
+                                    final boolean finalIsDroppable  = isDroppable;
+                                    Stage.MUTATION.execute(() -> {
+                                        // Local read - same as signal path, simulates the I/O cost
+                                        SinglePartitionReadCommand localRead =
+                                        SinglePartitionReadCommand.fullPartitionRead(
+                                        tableMetadata, FBUtilities.nowInSeconds(), mutation.key());
+                                        try (ReadExecutionController ctrl = localRead.executionController()
+                                                                                     .withIsSignalReadFromSelfNode(true);
+                                             UnfilteredPartitionIterator upi = localRead.executeLocally(ctrl))
+                                        {
+                                            PartitionIterator pi = UnfilteredPartitionIterators.filter(upi, localRead.nowInSec());
+                                            while (pi.hasNext())
+                                            {
+                                                RowIterator ri = pi.next();
+                                                while (ri.hasNext())
+                                                {
+                                                    Row r = ri.next();
+                                                    ColumnMetadata colMeta = ri.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+                                                    Cell c = r.getCell(colMeta);
+                                                    if (c == null || c.timestamp() != ts) continue;
+                                                    byte fb = c.buffer().get();
+                                                    c.buffer().rewind();
+                                                    if (fb != 0) continue; // already EC-encoded
+
+                                                    // Skip encoding - just take first 1/k bytes of raw value
+                                                    int fullLen  = c.buffer().remaining() - 1; // exclude firstByte
+                                                    int shardLen = Math.max(1, fullLen / ECConfig.DATA_SHARDS);
+                                                    ByteBuffer valueBuf = c.buffer().duplicate();
+                                                    valueBuf.get(); // skip firstByte=0
+                                                    byte[] shard = new byte[shardLen];
+                                                    valueBuf.get(shard, 0, shardLen);
+
+                                                    ByteBuffer shardBuf = ByteBuffer.allocate(1 + shardLen);
+                                                    shardBuf.put((byte) 1); // firstByte=1: EC shard
+                                                    shardBuf.put(shard);
+                                                    shardBuf.flip();
+
+                                                    Mutation.SimpleBuilder ecBuilder =
+                                                    Mutation.simpleBuilder(mutation.getKeyspaceName(), mutation.key());
+                                                    ecBuilder.update(tableMetadata).timestamp(ts).row()
+                                                             .add(ECConfig.EC_COLUMN, shardBuf);
+                                                    Mutation ecMutation = ecBuilder.build();
+                                                    ecMutation.isEcSignalMuattion = true;
+                                                    applyInternal(ecMutation, finalMakeDurable, true,
+                                                                  finalIsDroppable, true, new AsyncPromise<>());
+                                                }
+                                            }
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (requiresViewUpdate)
                     baseComplete.set(currentTimeMillis());
             }
@@ -694,11 +770,11 @@ public class Keyspace
     }
 
     public Future<?> applySignalRMW(final Mutation mutation,
-                               final boolean makeDurable,
-                               boolean updateIndexes,
-                               boolean isDroppable,
-                               boolean isDeferrable,
-                               Promise<?> future)
+                                    final boolean makeDurable,
+                                    boolean updateIndexes,
+                                    boolean isDroppable,
+                                    boolean isDeferrable,
+                                    Promise<?> future)
     {
         // Raj debug start signal received here
 

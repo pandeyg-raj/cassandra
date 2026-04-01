@@ -1325,8 +1325,12 @@ public class StorageProxy implements StorageProxyMBean
                 //long start = System.nanoTime();
 
 
-                ConsistencyLevel finalConsistencyLevel = consistencyLevel;
-                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
+                // commenting following two lines for NOEC signal SEND
+                //ConsistencyLevel finalConsistencyLevel = consistencyLevel;
+                //PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
+
+
+
 
                 /*
                 ECConfig.ECStage.execute(() -> {
