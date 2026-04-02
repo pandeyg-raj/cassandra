@@ -883,14 +883,20 @@ public class Keyspace
                                             byte isEC = 1;
                                             // finish encode data
                                             long startEncoding = System.nanoTime();
-                                            byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
+
+                                            // NoEcSignal: skip encoding, use 1/k of local value instead
+                                            int shardLen = Math.max(1, local_value.length() / k);
+                                            byte[] shardBytes = local_value.substring(0, shardLen).getBytes();
+
+                                            //byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
                                             LatencyRecorder.record(mutation.getKeyspaceName() , "encoding", (System.nanoTime() - startEncoding)/1000);
                                             //Tracing.trace("ECing value {} Storage layer",local_value);
 
                                             // find code index corresponding to ip
 
                                             //String coded_value  =  ECConfig.byteToString(encodeMatrix[codeIndex]);
-                                            int coded_valueLength = encodeMatrix[codeIndex].length;
+                                            //int coded_valueLength = encodeMatrix[codeIndex].length;
+                                            int coded_valueLength = shardBytes.length;
 
                                             ByteBuffer Finalbuffer = ByteBuffer.allocate((1 + (4 * 4)) + coded_valueLength);
                                             Finalbuffer.put(isEC);
@@ -898,7 +904,7 @@ public class Keyspace
                                             Finalbuffer.putInt(k);
                                             Finalbuffer.putInt(codeIndex);
                                             Finalbuffer.putInt(coded_valueLength);
-                                            Finalbuffer.put(encodeMatrix[codeIndex]);
+                                            Finalbuffer.put(shardBytes);
                                             Finalbuffer.flip();
 
                                             //logger.error("4 Storage layer ip : "+myLocalIP+ " coded index "+ codeIndex + "length of ec shard" + coded_valueLength+" thread "+ Thread.currentThread().getId());
