@@ -68,6 +68,11 @@ public class ECConfig
     public static int TOTAL_SHARDS ;
     public static String EC_COLUMN;
     public static String SignalStr ;
+    // Pre-built signal strings, one per rotation r in [0, TOTAL_SHARDS).
+    // SignalStrs[r] rotates every node's shard index by r (modulo TOTAL_SHARDS),
+    // so each partition key can pick a different shard-role permutation and
+    // every node ends up with a mix of data and parity shards across keys.
+    public static String[] SignalStrs ;
     /*
     = "signal," +
                        String.valueOf(ECConfig.TOTAL_SHARDS) +"," +
@@ -178,6 +183,38 @@ public class ECConfig
                        String.valueOf(TOTAL_SHARDS) +"," +
                        String.valueOf(DATA_SHARDS) +"," +
                        data.get("ec_configs").toString();
+
+            // Build SignalStrs[r] for each rotation r.
+            // ec_configs format: "<totalServer>,<ip>:<idx>,<ip>:<idx>,..."
+            // For rotation r, each node's shard idx becomes (origIdx + r) % TOTAL_SHARDS.
+            // IPs stay in their original positions so each replica still finds itself.
+            {
+                String ecConfigStr = data.get("ec_configs").toString();
+                String[] parts = ecConfigStr.split(",");
+                int totalServer = Integer.parseInt(parts[0]);
+                String[] ips = new String[totalServer];
+                int[] origIdx = new int[totalServer];
+                for (int i = 0; i < totalServer; i++) {
+                    String entry = parts[1 + i];
+                    int colon = entry.indexOf(':');
+                    ips[i] = entry.substring(0, colon);
+                    origIdx[i] = Integer.parseInt(entry.substring(colon + 1));
+                }
+                SignalStrs = new String[TOTAL_SHARDS];
+                for (int r = 0; r < TOTAL_SHARDS; r++) {
+                    StringBuilder sb = new StringBuilder("signal,")
+                                       .append(TOTAL_SHARDS).append(',')
+                                       .append(DATA_SHARDS).append(',')
+                                       .append(totalServer);
+                    for (int i = 0; i < totalServer; i++) {
+                        sb.append(',').append(ips[i]).append(':')
+                          .append((origIdx[i] + r) % TOTAL_SHARDS);
+                    }
+                    SignalStrs[r] = sb.toString();
+                }
+                logger.error("EC rotation signals built: TOTAL_SHARDS={} totalServer={} SignalStrs[0]={}",
+                             TOTAL_SHARDS, totalServer, SignalStrs[0]);
+            }
 
             //myWriter = new PrintWriter("Decodings.txt", StandardCharsets.UTF_8);
 

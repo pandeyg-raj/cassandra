@@ -1225,7 +1225,11 @@ public class StorageProxy implements StorageProxyMBean
                             */
 
 
-                            ByteBuffer Finalbuffer = ByteBufferUtil.bytes(ECConfig.SignalStr);
+                            //ByteBuffer Finalbuffer = ByteBufferUtil.bytes(ECConfig.SignalStr);
+                            // Rotate shard-role assignment per partition key so every node ends up
+                            // with a mix of data and parity shards across keys (load balance).
+                            int rot = Math.floorMod(mutation.key().hashCode(), ECConfig.TOTAL_SHARDS);
+                            ByteBuffer Finalbuffer = ByteBufferUtil.bytes(ECConfig.SignalStrs[rot]);
                             // Finalbuffer.flip();
 
                             //logger.error("byte buffer signaal is:"+ByteBufferUtil.string(Finalbuffer));
