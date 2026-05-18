@@ -36,6 +36,7 @@ import com.google.common.base.Joiner;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.DecoratedKey;
 import org.apache.cassandra.db.DeletionTime;
+import org.apache.cassandra.db.EmptyIterators;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.ReadResponse;
 import org.apache.cassandra.db.RegularAndStaticColumns;
@@ -330,275 +331,215 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
 
     public PartitionIterator myCombineResponseRange()
     {
-        
-        // array to keep track which code part is available
-        boolean []  isCodeavailable = new boolean[ECConfig.TOTAL_SHARDS];
-        //boolean IswholeValue = false;
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
 
-        if( snapshot.size() < ECConfig.DATA_SHARDS )
+        if (snapshot.size() < ECConfig.DATA_SHARDS)
         {
             Tracing.trace("Only got {} responses:{} , needed {}", snapshot.size(), ECConfig.DATA_SHARDS);
         }
-        //logger.error("Got responses total "+snapshot.size());
-        Map<DecoratedKey, ECResponse[]> partitionResponses = new HashMap<>();
 
-        int ShardSize =-1;
+        // Per-partition state. Each partition has its own available[]/shardSize/wholeValue, so:
+        //  - shard-availability is not polluted across partitions (was a bug with the shared isCodeavailable[])
+        //  - shard-size is the actual size for each row (was a bug when value lengths differed)
+        //  - a partition with a whole-value response does not short-circuit other partitions in the range
+        // With rotation, two partitions in the same range can need different reconstruction routes
+        // (some combine, some decode), so we make that decision per-partition.
+        Map<DecoratedKey, PartitionEcState> partitionState = new HashMap<>();
+
         final ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
         final long nowInSec = command.nowInSec();
-        
+
+        // ---- Pass 1: bucket every replica's rows by partition key ----
         for (Message<ReadResponse> message : snapshot)
         {
-            //String messageSender = message.from().getHostAddress(false);
-            //int ECIndexOfServer  = ECConfig.getAddressMap().get(messageSender);
-
-            //ecResponses[TmpIndex].setEcCodeIndex(ECIndexOfServer);
             ReadResponse response = message.payload;
-            // check if the response is indeed a data response
-            // we shouldn't get a digest response here
-
-            //assert response.isDigestResponse() == false;
-            if(response.isDigestResponse() == true)
+            if (response.isDigestResponse())
             {
                 logger.error("digest received");
                 continue;
             }
 
-            if(tmp == null){
+            if (tmp == null || tmp.capacity < message.payload.capacity)
                 tmp = message.payload;
-            }
-            else
-            {
-                if( tmp.capacity < (message.payload).capacity)
-                {
-                    tmp = message.payload;
-                }
-            }
-            // get the partition iterator corresponding to the
-            // current data response
-            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), nowInSec);
 
-            // get the z value column
-            while(pi.hasNext())
+            PartitionIterator pi = UnfilteredPartitionIterators.filter(response.makeIterator(command), nowInSec);
+            while (pi.hasNext())
             {
-                // pi.next() returns a RowIterator
                 RowIterator ri = pi.next();
                 DecoratedKey partitionKey = ri.partitionKey();
+                PartitionEcState state = partitionState.computeIfAbsent(partitionKey, k -> new PartitionEcState());
 
-                ECResponse[] ecResponses = partitionResponses
-                                           .computeIfAbsent(partitionKey, k -> {
-                                               ECResponse[] arr = new ECResponse[ECConfig.TOTAL_SHARDS];
-                                               for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
-                                                   arr[i] = new ECResponse();
-                                               return arr;
-                                           });
-                while(ri.hasNext())
+                while (ri.hasNext())
                 {
-                    // todo: the entire row is read for the sake of development
-                    // future improvement could be made
                     try
                     {
-                        Cell c = ri.next().getCell(colMeta); // ri.next() = Row
-                        ByteBuffer Finalbuffer = c.buffer();
+                        Cell c = ri.next().getCell(colMeta);
+                        if (c == null) continue; // row didn't carry the EC column
 
+                        ByteBuffer Finalbuffer = c.buffer();
                         byte isEc = Finalbuffer.get();
 
-                        //if isEc !=1  not necessarly whole value, some "signal string from a new node just boot up,
-                        // cassandra send last message to bootup node , which is signal string ?"
-
-                        if( isEc !=1)
+                        if (isEc == 0) // whole value for this partition
+                        {
+                            Finalbuffer.position(1);
+                            state.wholeValue = Finalbuffer.slice();
+                            continue;
+                        }
+                        if (isEc != 1)
                         {
                             Finalbuffer.position(0);
-                            if(isEc == 0) // whole value
+                            String s = ByteBufferUtil.string(Finalbuffer);
+                            if (s.length() >= 6 && "signal".equals(s.substring(0, 6)))
                             {
-                                Finalbuffer.position(1);
-                                //logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
-                                ReadResponse tmpp = modifyCellValue(tmp,Finalbuffer);// should use trim() mostly Yes?
-                                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
-
-                            }
-                            else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
-                            {
-                                // garbage value consider lost
-                                logger.info("Garbage value discarding/ read response, len "+Finalbuffer.remaining() + "tid:"+Thread.currentThread().getId());
+                                logger.info("Garbage signal value in read response, len " + Finalbuffer.remaining());
                                 continue;
                             }
-                            else// this should never happen
-                            {
-                                assert true == false;
-                            }
+                            logger.error("Unknown EC marker byte: " + isEc);
+                            continue;
                         }
-                        // do not comment below , need to remove from finalbuffer
-                        // to move pointer forward
+
                         int n = Finalbuffer.getInt();
                         int k = Finalbuffer.getInt();
                         int codeIndex = Finalbuffer.getInt();
                         int coded_valueLength = Finalbuffer.getInt();
-                        if (ShardSize < coded_valueLength) {
-			    ShardSize = coded_valueLength;
-			}
 
-                        if(codeIndex < ECConfig.DATA_SHARDS) // data shard
-                        {
+                        if (state.shardSize < coded_valueLength)
+                            state.shardSize = coded_valueLength;
 
-                            // logger.error("data shard found TIMESTAMP "+ c.timestamp() + " index #"+codeIndex+ "shardSize"+ShardSize +" from "+ message.from().getHostAddress(false));
-                            //String value = ByteBufferUtil.string(Finalbuffer);
-                            //ecResponses[codeIndex].setEcCode(value);
-                            //ecResponses[codeIndex].setCodeLength(value.length());
-                            ecResponses[codeIndex].setEcCode(Finalbuffer.slice().duplicate());
-
-                        }
-                        else // parity shard
-                        {
-                            // logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
-                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
-
-
-                        }
-                        ecResponses[codeIndex].setCodeLength(coded_valueLength);
-                        ecResponses[codeIndex].setIsEcCoded(isEc);
-                        ecResponses[codeIndex].setCodeTimestamp(c.timestamp());
-                        ecResponses[codeIndex].setCodeAvailable(true);
-                        ecResponses[codeIndex].setEcCodeIndex(codeIndex);
-                        isCodeavailable[codeIndex] = true;
+                        ECResponse er = state.responses[codeIndex];
+                        if (codeIndex < ECConfig.DATA_SHARDS)
+                            er.setEcCode(Finalbuffer.slice().duplicate());
+                        else
+                            er.setEcCodeParity(Finalbuffer.slice().duplicate());
+                        er.setCodeLength(coded_valueLength);
+                        er.setIsEcCoded(isEc);
+                        er.setCodeTimestamp(c.timestamp());
+                        er.setCodeAvailable(true);
+                        er.setEcCodeIndex(codeIndex);
+                        state.available[codeIndex] = true;
                     }
                     catch (Exception e)
                     {
-                        e.printStackTrace();
-                        return null;
+                        // Skip this row only; do not abort the whole range read.
+                        logger.error("Failed to parse EC cell in range read", e);
                     }
                 }
-                //partitionResponses.add(ecResponses);
             }
         }
-        
 
-        // verify if decoding needed
-        // no decodign needed if all data fragment present, just combine and return
-        // no decoding needed/possible if whole data presend or not enough codes available
-
-        // Now reconstruct values for all partitions
-        //List<UnfilteredPartitionIterator> rebuiltPartitions = new ArrayList<>();
+        // ---- Pass 2: reconstruct per partition (independent route per partition) ----
         ErasureCode decoder = new ErasureCode();
+        Map<DecoratedKey, ByteBuffer> decodedValues = new HashMap<>(partitionState.size() * 2);
 
-
-        // check if all "DATA" codes available
-        long ifTime = 0;  // Time spent in the if block
-        long elseTime = 0;  // Time spent in the else block
-        long rebuiltPartitionTime1 = 0;
-        long rebuiltPartitionTime2 = 0;
-        long dataCombination = System.nanoTime();
-
-        final ReadResponse tmpFinal = tmp;
-
-        boolean IsEcDeccodeNeeded = false;
-        for (ECResponse[] ecResponses : partitionResponses.values())
+        for (Map.Entry<DecoratedKey, PartitionEcState> entry : partitionState.entrySet())
         {
-            if(!IsEcDeccodeNeeded)
+            PartitionEcState state = entry.getValue();
+
+            // Route A: whole value already present -> use it directly, no work.
+            if (state.wholeValue != null)
             {
+                decodedValues.put(entry.getKey(), state.wholeValue);
+                continue;
+            }
+
+            // No usable shards for this partition (e.g., only signal-garbage cells). Skip.
+            if (state.shardSize <= 0)
+                continue;
+
+            // Decide combine vs decode for THIS partition only.
+            boolean needsDecode = false;
+            for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+            {
+                if (!state.available[i]) { needsDecode = true; break; }
+            }
+
+            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * state.shardSize);
+
+            if (!needsDecode)
+            {
+                // Route B: all K data shards present -> concat.
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
                 {
-                    if (!ecResponses[i].getIsCodeAvailable())
+                    ByteBuffer shard = state.responses[i].getEcCode().duplicate();
+                    shard.position(0);
+                    try
                     {
-                        IsEcDeccodeNeeded = true;
-                        break;
+                        combined.put(shard);
+                    }
+                    catch (Exception e)
+                    {
+                        logger.error("BufferOverflowException pk={} combined[pos={},lim={},cap={}] shard[cap={}]",
+                                     entry.getKey(), combined.position(), combined.limit(),
+                                     combined.capacity(), shard.capacity(), e);
+                        throw new RuntimeException(e);
                     }
                 }
-            }
-        }
-        final boolean IsEcDeccodeNeededFinal = IsEcDeccodeNeeded;
-
-        Map<DecoratedKey, ByteBuffer> decodedValues = new HashMap<>();
-        for (Map.Entry<DecoratedKey, ECResponse[]> er : partitionResponses.entrySet())
-        {
-
-            ECResponse[] ecResponses = er.getValue();
-
-            ByteBuffer combined = ByteBuffer.allocate(ECConfig.DATA_SHARDS * ShardSize);
-
-            if (!IsEcDeccodeNeededFinal)
-            {
-                try
-                {
-                    /*StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
-                        sb.append(ByteBufferUtil.string(ecResponses[i].getEcCode()));
-                    combinedValue = sb.toString().trim();
-                    */
-
-                    for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
-                    {
-                        ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
-                        shard.position(0);              // ensure full shard
-				try{
-					combined.put(shard);            // bulk copy
-				}
-				catch (Exception e) {
-				   logger.error(
-				        "BufferOverflowException: combined[pos={}, lim={}, cap={}], shard[pos={}, lim={}, cap={}]",
-				        combined.position(), combined.limit(), combined.capacity(),
-				        shard.position(), shard.limit(), shard.capacity(),
-				        e
-				    );
-				    throw new RuntimeException(e);
-
-				}
-                    }
-                    combined.flip(); // prepare for read
-                }
-                catch (Exception e)
-                {
-
-                    throw new RuntimeException(e);
-                }
+                combined.flip();
             }
             else
             {
-                long dataCombinationelse = System.nanoTime();
-                // Need to decode missing shards
-                byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][ShardSize];
-
-                for (int i = 0; i < ecResponses.length; i++)
+                // Route C: missing data shard(s) -> Reed-Solomon decode using this partition's parity.
+                byte[][] decodeMatrix = new byte[ECConfig.TOTAL_SHARDS][state.shardSize];
+                for (int i = 0; i < state.responses.length; i++)
                 {
-                    if (ecResponses[i].getIsCodeAvailable())
+                    if (state.available[i])
                     {
                         ByteBuffer buf = (i < ECConfig.DATA_SHARDS)
-                                         ? ecResponses[i].getEcCode()
-                                         : ecResponses[i].getEcCodeParity();
-                        buf.get(decodeMatrix[ecResponses[i].getEcCodeIndex()]);
+                                         ? state.responses[i].getEcCode()
+                                         : state.responses[i].getEcCodeParity();
+                        ByteBuffer dup = buf.duplicate();
+                        dup.position(0);
+                        dup.get(decodeMatrix[i]);
                     }
-                    else // code not available , allocate empty space
-                    {
-                        decodeMatrix[i] = new byte[ShardSize];
-                    }
+                    // else: decodeMatrix[i] is already zero-filled by allocation
                 }
-
                 try
                 {
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
-                    decoder.MyDecodeByteBuffer(out, decodeMatrix, isCodeavailable,
-                                               ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                    decoder.MyDecodeByteBuffer(out, decodeMatrix, state.available,
+                                               state.shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
-                    combined.limit(out.length);    // reset position=0, limit=capacity
-                    LatencyRecorder.record(command.metadata().keyspace, "decoding", (System.nanoTime() - startDecoding) / 1000);
+                    combined.limit(out.length);
+                    LatencyRecorder.record(command.metadata().keyspace, "decoding",
+                                           (System.nanoTime() - startDecoding) / 1000);
                 }
                 catch (Exception e)
                 {
                     throw new RuntimeException(e);
                 }
             }
-            decodedValues.put(er.getKey(), combined);
+
+            decodedValues.put(entry.getKey(), combined);
+        }
+
+        if (tmp == null)
+        {
+            // No usable data response received; return empty.
+            return EmptyIterators.partition();
         }
 
         ReadResponse rebuilt = modifyCellValues(tmp, decodedValues);
+        return UnfilteredPartitionIterators.filter(rebuilt.makeIterator(command), nowInSec);
+    }
 
-        //logger.error("CombineResponseRange data combining Total took "+ (((System.nanoTime() - dataCombination)) / 1000000) +"ms for partitions/rows count" + partitionResponses.size() );
+    /** Per-partition reconstruction state for range reads. */
+    private static final class PartitionEcState
+    {
+        final ECResponse[] responses;
+        final boolean[]    available;
+        int                shardSize;
+        ByteBuffer         wholeValue;
 
-        return UnfilteredPartitionIterators.filter(
-        rebuilt.makeIterator(command),
-        nowInSec);
+        PartitionEcState()
+        {
+            responses = new ECResponse[ECConfig.TOTAL_SHARDS];
+            for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
+                responses[i] = new ECResponse();
+            available = new boolean[ECConfig.TOTAL_SHARDS];
+            shardSize = -1;
+        }
     }
 
     private boolean usesReplicaFilteringProtection()
