@@ -22,6 +22,7 @@ package org.apache.cassandra.erasurecode;
     import java.io.IOException;
     import java.io.InputStream;
     import java.nio.charset.StandardCharsets;
+    import java.util.concurrent.ConcurrentHashMap;
 
     import org.slf4j.Logger;
     import org.slf4j.LoggerFactory;
@@ -36,6 +37,17 @@ public class ErasureCode
    // public static final int PARITY_SHARDS = ECConfig.PARITY_SHARDS ;
    // public static final int TOTAL_SHARDS = ECConfig.TOTAL_SHARDS ;
     private static final Logger logger = LoggerFactory.getLogger(ErasureCode.class);
+
+    // ReedSolomon.create() rebuilds the Cauchy matrix and its inverses each call — expensive.
+    // In practice (K, PARITY) never changes, but key the cache anyway in case it does.
+    // decodeMissing/encodeParity only read the matrices, so a single shared instance is thread-safe.
+    private static final ConcurrentHashMap<Long, ReedSolomon> RS_CACHE = new ConcurrentHashMap<>();
+
+    private static ReedSolomon rs(int dataShards, int parityShards)
+    {
+        long key = ((long) dataShards << 32) | (parityShards & 0xffffffffL);
+        return RS_CACHE.computeIfAbsent(key, k -> ReedSolomon.create(dataShards, parityShards));
+    }
 
     public  byte [] []  MyEncode (String inputFile,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
@@ -88,7 +100,7 @@ public class ErasureCode
         //}
         // Use Reed-Solomon to calculate the parity.
 
-        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
+        ReedSolomon reedSolomon = rs(DATA_SHARDS, PARITY_SHARDS);
         reedSolomon.encodeParity(shards, 0, shardSize);
 
         return shards;
@@ -97,7 +109,7 @@ public class ErasureCode
     public  byte[]  MyDecodeByteBuffer (byte[] out, byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
-        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
+        ReedSolomon reedSolomon = rs(DATA_SHARDS, PARITY_SHARDS);
 
         reedSolomon.decodeMissing(shards, shardPresent, 0, shardSize);
 
@@ -116,7 +128,7 @@ public class ErasureCode
     public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
-        ReedSolomon reedSolomon = ReedSolomon.create(DATA_SHARDS, PARITY_SHARDS);
+        ReedSolomon reedSolomon = rs(DATA_SHARDS, PARITY_SHARDS);
 
         reedSolomon.decodeMissing(shards, shardPresent, 0, shardSize);
 
