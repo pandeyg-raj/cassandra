@@ -2087,6 +2087,12 @@ public class StorageProxy implements StorageProxyMBean
             }
         }
 
+        // update read to ecquorum
+        if (consistencyLevel == ConsistencyLevel.QUORUM)
+        {
+            consistencyLevel = ConsistencyLevel.EC_QUORUM;
+        }
+
         return consistencyLevel.isSerialConsistency()
              ? readWithPaxos(group, consistencyLevel, requestTime)
              : readRegular(group, consistencyLevel, requestTime);
