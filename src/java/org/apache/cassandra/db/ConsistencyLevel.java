@@ -49,7 +49,8 @@ public enum ConsistencyLevel
     SERIAL      (8),
     LOCAL_SERIAL(9, true),
     LOCAL_ONE   (10, true),
-    NODE_LOCAL  (11, true);
+    NODE_LOCAL  (11, true),
+    EC_QUORUM   (12);
 
     private static final Logger logger = LoggerFactory.getLogger(ConsistencyLevel.class);
     // Used by the binary protocol
@@ -162,6 +163,8 @@ public enum ConsistencyLevel
             case QUORUM:
             case SERIAL:
                 return quorumFor(replicationStrategy);
+            case EC_QUORUM:
+                return ECConfig.DATA_SHARDS + ((ECConfig.PARITY_SHARDS + 1) / 2);
             case ALL:
                 return replicationStrategy.getReplicationFactor().allReplicas;
             case LOCAL_QUORUM:
@@ -199,7 +202,7 @@ public enum ConsistencyLevel
                 blockFor += pending.count(InOurDc.replicas());
                 break;
             case ONE: case TWO: case THREE:
-            case QUORUM: case EACH_QUORUM:
+            case QUORUM: case EACH_QUORUM: case EC_QUORUM:
             case SERIAL:
             case ALL:
                 blockFor += pending.size();
