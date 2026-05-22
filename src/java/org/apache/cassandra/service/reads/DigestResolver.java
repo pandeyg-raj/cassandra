@@ -120,7 +120,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
     }
 
-    public ReadResponse modifyCellValue(ReadResponse originalResponse,String encoded_value) {
+    public ReadResponse modifyCellValue(ReadResponse originalResponse, ByteBuffer encoded_value) {
 
 
         // Extract the data from the original response
@@ -149,7 +149,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     for (Cell<?> cell : row.cells()) {
                         if (cell.column().name.toString().equals(ECConfig.EC_COLUMN)) {
                             // Modify target cell
-                            rowBuilder.addCell(cell.withUpdatedValue(ByteBufferUtil.bytes(encoded_value)));
+                            rowBuilder.addCell(cell.withUpdatedValue(encoded_value));
                         } else {
                             // Copy existing cells
                             rowBuilder.addCell(cell);
@@ -271,8 +271,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             if(isEc == 0) // whole value
                             {
                                 Finalbuffer.position(1);
-                                //logger.info("Whole value found len " + Finalbuffer.remaining()+" TIMESTAMP"+ c.timestamp() +"count" + ECConfig.wholeValueFound++ +"from"+message.from().getHostAddress(false));
-                                ReadResponse tmpp = modifyCellValue(tmp,ByteBufferUtil.string(Finalbuffer));// should use trim() mostly Yes?
+                                ReadResponse tmpp = modifyCellValue(tmp, Finalbuffer.slice());
                                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
 
                             }
@@ -347,25 +346,21 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
 
         }
 
-        String encoded_value = "";
         ReadResponse tmpp;
         try
         {
             if(!IsEcDeccodeNeeded)
             {
-                // just combine and return
-                //logger.info("Read Returning: All data shartd available ");
-
-
+                // All K data shards present — concatenate raw bytes, no decode, no String round-trip.
+                // Length is ShardSize * DATA_SHARDS (may include trailing zero padding from the encoder).
+                // TODO: once the encoder writes the original value length into the header, slice to that length.
+                byte[] combined = new byte[ShardSize * ECConfig.DATA_SHARDS];
                 for (int i = 0; i < ECConfig.DATA_SHARDS; i++) {
-
-                    encoded_value = encoded_value + ByteBufferUtil.string(ecResponses[i].getEcCode()); //ecResponses[i].getEcCode();
-
-                    //logger.info("Combining value:  " + encoded_value);
+                    ByteBuffer shard = ecResponses[i].getEcCode().duplicate();
+                    int len = Math.min(ShardSize, shard.remaining());
+                    shard.get(combined, ShardSize * i, len);
                 }
-
-                //logger.info("No decoding needed Combining value:  " + encoded_value);
-                tmpp = modifyCellValue(tmp,encoded_value.trim());// should use trim() mostly Yes?
+                tmpp = modifyCellValue(tmp, ByteBuffer.wrap(combined));
 
                 try
                 {
@@ -420,18 +415,12 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         {
             Tracing.trace("ECTRACE READ DECODING START");
             long startDecoding = System.nanoTime();
-            encoded_value = new ErasureCode().MyDecode(decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS,ECConfig.DATA_SHARDS );
+            byte[] decoded = new byte[ShardSize * ECConfig.DATA_SHARDS];
+            new ErasureCode().MyDecodeByteBuffer(decoded, decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
             LatencyRecorder.record(command.metadata().keyspace,"decoding", (System.nanoTime() - startDecoding)/1000);
             Tracing.trace("ECTRACE READ DECODING STOP");
-            //ECConfig.DecodingNeeded++;
-            //ECConfig.myWriter.println("Decoding#: "+ECConfig.DecodingNeeded + "time ms ,"+TimeUnit.NANOSECONDS.toMillis(nanoTime() - decodeStart));
 
-            //String encoded_value = "testValue";
-            // encoded_value = codelist.get(0) + codelist.get(1) ;
-            //Tracing.trace("Read Returning: encoded value is {}",encoded_value);
-           // logger.info("Read Returning: encoded main computer value is "+ encoded_value);
-
-            tmpp = modifyCellValue(tmp,encoded_value);
+            tmpp = modifyCellValue(tmp, ByteBuffer.wrap(decoded));
 
             try{
                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
