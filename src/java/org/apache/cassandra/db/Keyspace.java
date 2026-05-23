@@ -96,6 +96,12 @@ import static org.apache.cassandra.utils.MonotonicClock.Global.approxTime;
  */
 public class Keyspace
 {
+    // TEMPORARY — verify Option C: confirms signal mutations are correctly classified after deserialization.
+    // Remove after verification.
+    public static final java.util.concurrent.atomic.LongAdder EC_SIGNAL_DISPATCH_COUNT = new java.util.concurrent.atomic.LongAdder();
+    public static final java.util.concurrent.atomic.LongAdder EC_NORMAL_WRITE_COUNT = new java.util.concurrent.atomic.LongAdder();
+
+
     private static final Logger logger = LoggerFactory.getLogger(Keyspace.class);
 
     private static final String TEST_FAIL_WRITES_KS = CassandraRelevantProperties.TEST_FAIL_WRITES_KS.getString();
@@ -543,12 +549,20 @@ public class Keyspace
         //if(IsRMWSignalMutation(mutation))
         if (mutation.isEcSignalMuattion)
         {
+            EC_SIGNAL_DISPATCH_COUNT.increment();
+            long count = EC_SIGNAL_DISPATCH_COUNT.sum();
+            logger.info("EC SIGNAL DISPATCH #{} — key={}, ks={}",
+                        count, mutation.key(), mutation.getKeyspaceName());
             //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
             // updateIndexes, isDroppable,isDeferrable, future));
             return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
 
         }
-        
+        EC_NORMAL_WRITE_COUNT.increment();
+        logger.info("EC counters: signals={}, normal_writes={}",
+                    Keyspace.EC_SIGNAL_DISPATCH_COUNT.sum(),
+                    Keyspace.EC_NORMAL_WRITE_COUNT.sum());
+
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
