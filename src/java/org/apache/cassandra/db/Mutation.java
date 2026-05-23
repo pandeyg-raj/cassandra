@@ -62,6 +62,8 @@ public class Mutation implements IMutation, Supplier<Mutation>
 {
     public static final MutationSerializer serializer = new MutationSerializer();
     public boolean isEcSignalMuattion = false;
+    public boolean isEcFragmentWrite = false;   // local-only: marks the fragment write submitted by applySignalRMW
+
     // todo this is redundant
     // when we remove it, also restore SerializationsTest.testMutationRead to not regenerate new Mutations each test
     private final String keyspaceName;

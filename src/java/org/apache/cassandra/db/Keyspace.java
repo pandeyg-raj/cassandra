@@ -546,7 +546,7 @@ public class Keyspace
     {
         
         //if(IsRMWSignalMutation(mutation))
-        if (mutation.isEcSignalMuattion)
+        if (mutation.isEcSignalMuattion && !mutation.isEcFragmentWrite)
         {
             EC_SIGNAL_DISPATCH_COUNT.increment();
             long count = EC_SIGNAL_DISPATCH_COUNT.sum();
@@ -907,7 +907,9 @@ public class Keyspace
                                              */
                                             mutationBuilder.update(mutation.getPartitionUpdates().iterator().next().metadata()).timestamp(current_timestamp).row().add(ECConfig.EC_COLUMN, Finalbuffer);
                                             Mutation ECmutation = mutationBuilder.build();
-                                            // ECmutation.isEcSignalMuattion = true;
+                                            ECmutation.isEcSignalMuattion = true;     // keep — drives downstream telemetry (Case1/2 counters, latency buckets)
+                                            ECmutation.isEcFragmentWrite = true;      // NEW — tells the inline check to skip applySignalRMW dispatch
+
                                             Stage.MUTATION.execute(() ->
                                                                    applyInternal(ECmutation, makeDurable, true, isDroppable, true, future)
                                             );
