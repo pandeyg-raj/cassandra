@@ -483,6 +483,7 @@ public class Mutation implements IMutation, Supplier<Mutation>
             {
                 serializer.serialize(partitionUpdate, out, version);
             }
+            out.writeBoolean(mutation.isEcSignalMuattion);
         }
 
         public Mutation deserialize(DataInputPlus in, int version, DeserializationHelper.Flag flag) throws IOException
@@ -514,6 +515,8 @@ public class Mutation implements IMutation, Supplier<Mutation>
                     }
                     m = new Mutation(update.metadata().keyspace, dk, modifications.build(), approxTime.now());
                 }
+
+                m.isEcSignalMuattion = teeIn.readBoolean();   // <-- NEW: must match serializeInternal order
 
                 //Only cache serializations that don't hit the limit
                 if (!teeIn.isLimitReached())
@@ -593,6 +596,8 @@ public class Mutation implements IMutation, Supplier<Mutation>
                 size = TypeSizes.sizeofUnsignedVInt(mutation.modifications.size());
                 for (PartitionUpdate partitionUpdate : mutation.modifications.values())
                     size += serializer.serializedSize(partitionUpdate, version);
+                size += TypeSizes.sizeof(true);   // <-- NEW: 1 byte for isEcSignalMuattion flag
+
                 this.size = size;
             }
             return size;

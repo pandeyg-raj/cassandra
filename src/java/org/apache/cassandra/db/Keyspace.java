@@ -540,7 +540,8 @@ public class Keyspace
                                                Promise<?> future)
     {
         
-        if(IsRMWSignalMutation(mutation))
+        //if(IsRMWSignalMutation(mutation))
+        if (mutation.isEcSignalMuattion)
         {
             //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
             // updateIndexes, isDroppable,isDeferrable, future));
