@@ -429,7 +429,7 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
         }
 
         // ---- Pass 2: reconstruct per partition (independent route per partition) ----
-        ErasureCode decoder = new ErasureCode();
+
         Map<DecoratedKey, ByteBuffer> decodedValues = new HashMap<>(partitionState.size() * 2);
 
         for (Map.Entry<DecoratedKey, PartitionEcState> entry : partitionState.entrySet())
@@ -498,8 +498,8 @@ public class DataResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRead<
                 {
                     long startDecoding = System.nanoTime();
                     byte[] out = combined.array();
-                    decoder.MyDecodeByteBuffer(out, decodeMatrix, state.available,
-                                               state.shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+                    ErasureCode.MyDecodeByteBuffer(out, decodeMatrix, state.available,
+                                                   state.shardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
                     combined.position(0);
                     combined.limit(out.length);
                     LatencyRecorder.record(command.metadata().keyspace, "decoding",

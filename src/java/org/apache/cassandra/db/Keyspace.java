@@ -772,6 +772,10 @@ public class Keyspace
                                 {
                                     // first we have to transform it into a PartitionIterator
                                     PartitionIterator pi = UnfilteredPartitionIterators.filter(iterator, localRead.nowInSec());
+
+                                    // Hoist out of the row loops — does not depend on `r` or `ri`.
+                                    long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
+
                                     while (pi.hasNext())
                                     {
                                         RowIterator ri = pi.next();
@@ -784,7 +788,7 @@ public class Keyspace
 
 
                                             //long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().primaryKeyLivenessInfo().timestamp();
-                                            long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
+                                            //long current_timestamp = mutation.getPartitionUpdates().iterator().next().lastRow().getCell(tableMetadata.getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN))).timestamp();
 
 
                                             if (c.timestamp() != current_timestamp) // not the right value to erasure code
@@ -845,7 +849,7 @@ public class Keyspace
                                             byte isEC = 1;
                                             // finish encode data
                                             long startEncoding = System.nanoTime();
-                                            byte[][] encodeMatrix = new ErasureCode().MyEncode(local_value, n, k);
+                                            byte[][] encodeMatrix = ErasureCode.MyEncode(local_value, n, k);
                                             LatencyRecorder.record(mutation.getKeyspaceName() , "encoding", (System.nanoTime() - startEncoding)/1000);
                                             //Tracing.trace("ECing value {} Storage layer",local_value);
 

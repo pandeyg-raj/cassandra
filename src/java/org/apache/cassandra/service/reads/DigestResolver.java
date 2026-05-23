@@ -211,6 +211,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             ecResponses[i] = new ECResponse();
         }
         int ShardSize =-1;
+        // EC column lookup is constant for this command — compute once instead of per-row, per-response.
+        ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+
         for (Message<ReadResponse> message : snapshot)
         {
             //String messageSender = message.from().getHostAddress(false);
@@ -254,7 +257,8 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 {
                     // todo: the entire row is read for the sake of development
                     // future improvement could be made
-                        ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
+                    // colMeta defined out side loop once
+                     //   ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
                     try
                     {
                         Cell c = ri.next().getCell(colMeta); // ri.next() = Row
@@ -302,13 +306,13 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             //String value = ByteBufferUtil.string(Finalbuffer);
                             //ecResponses[codeIndex].setEcCode(value);
                             //ecResponses[codeIndex].setCodeLength(value.length());
-                            ecResponses[codeIndex].setEcCode(Finalbuffer.slice().duplicate());
+                            ecResponses[codeIndex].setEcCode(Finalbuffer.slice());
 
                         }
                         else // parity shard
                         {
                            // logger.error("parity shard found TIMESTAMP "+ c.timestamp()+" index #"+codeIndex+ "shardSize"+ShardSize+ "from "+ message.from().getHostAddress(false));
-                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice().duplicate());
+                            ecResponses[codeIndex].setEcCodeParity(Finalbuffer.slice());
 
 
                         }
@@ -405,18 +409,22 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                 }
                 //logger.info("decoding length of index "+ ecResponses[i].getEcCodeIndex() + " is " + decodeMatrix[ecResponses[i].getEcCodeIndex()].length);
             }
+            /*  already initialized outside loop
             else // code not available , allocate empty space
             {
                 decodeMatrix[i] = new byte[ShardSize];
             }
+
+             */
         }
 
         try
         {
+
+            byte[] decoded = new byte[ShardSize * ECConfig.DATA_SHARDS];
             Tracing.trace("ECTRACE READ DECODING START");
             long startDecoding = System.nanoTime();
-            byte[] decoded = new byte[ShardSize * ECConfig.DATA_SHARDS];
-            new ErasureCode().MyDecodeByteBuffer(decoded, decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
+            ErasureCode.MyDecodeByteBuffer(decoded, decodeMatrix, isCodeavailable, ShardSize, ECConfig.TOTAL_SHARDS, ECConfig.DATA_SHARDS);
             LatencyRecorder.record(command.metadata().keyspace,"decoding", (System.nanoTime() - startDecoding)/1000);
             Tracing.trace("ECTRACE READ DECODING STOP");
 

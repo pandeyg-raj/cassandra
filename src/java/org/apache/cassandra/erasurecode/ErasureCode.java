@@ -49,7 +49,8 @@ public class ErasureCode
         return RS_CACHE.computeIfAbsent(key, k -> ReedSolomon.create(dataShards, parityShards));
     }
 
-    public  byte [] []  MyEncode (String inputFile,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
+
+    public static byte[][] MyEncode(String inputFile, int TOTAL_SHARDS, int DATA_SHARDS) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
         // Get the size of the input file.  (Files bigger that  Integer.MAX_VALUE will fail here!)
@@ -106,7 +107,7 @@ public class ErasureCode
         return shards;
     }
 
-    public  byte[]  MyDecodeByteBuffer (byte[] out, byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
+    public static byte[] MyDecodeByteBuffer(byte[] out, byte[][] shards, boolean[] shardPresent, int shardSize, int TOTAL_SHARDS, int DATA_SHARDS) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
         ReedSolomon reedSolomon = rs(DATA_SHARDS, PARITY_SHARDS);
@@ -125,7 +126,7 @@ public class ErasureCode
         return out;
         // return new String( NewallBytes, StandardCharsets.UTF_8).trim();
     }
-    public  String  MyDecode (byte[][] shards,boolean [] shardPresent,int shardSize,int TOTAL_SHARDS,int DATA_SHARDS ) throws IOException
+    public static String MyDecode(byte[][] shards, boolean[] shardPresent, int shardSize, int TOTAL_SHARDS, int DATA_SHARDS) throws IOException
     {
         int PARITY_SHARDS = TOTAL_SHARDS - DATA_SHARDS;
         ReedSolomon reedSolomon = rs(DATA_SHARDS, PARITY_SHARDS);
