@@ -57,6 +57,7 @@ import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.erasurecode.LatencyRecorder;
+import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.index.SecondaryIndexManager;
@@ -543,9 +544,11 @@ public class Keyspace
         //if(IsRMWSignalMutation(mutation))
         if (mutation.isEcSignalMuattion && !mutation.isEcFragmentWrite)
         {
-            //PriorityThreadPoolUtil.getExecutor().submit(() -> applySignalRMW(mutation, makeDurable,
-            // updateIndexes, isDroppable,isDeferrable, future));
-            return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
+            PriorityThreadPoolUtil.getExecutor().submit(() ->
+                                                        applySignalRMW(mutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future));
+            return future;
+
+            //return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
 
         }
 
@@ -896,10 +899,23 @@ public class Keyspace
                                             ECmutation.isEcSignalMuattion = true;     // keep — drives downstream telemetry (Case1/2 counters, latency buckets)
                                             ECmutation.isEcFragmentWrite = true;      // NEW — tells the inline check to skip applySignalRMW dispatch
 
-                                            Stage.MUTATION.execute(() ->
-                                                                   applyInternal(ECmutation, makeDurable, true, isDroppable, true, future)
-                                            );
-                                            return future;
+                                           // Stage.MUTATION.execute(() ->
+                                            //                       applyInternal(ECmutation, makeDurable, true, isDroppable, true, future)
+                                            //);
+
+                                            //return future;
+
+                                          //  PriorityThreadPoolUtil.getExecutor().submit(() ->
+                                          //                                              applyInternal(ECmutation, makeDurable, true, isDroppable, true, future));
+
+
+                                            // Options 1+2: synchronous call (no dispatch) + makeDurable=false (no commitlog).
+                                            // Runs on the PriorityThreadPoolUtil thread that started applySignalRMW.
+                                            return applyInternal(ECmutation, false, true, isDroppable, true, future);
+
+
+
+
                                             //applyInternal(ECmutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future);
                                             //ECConfig.TotalSignalApplied.incrementAndGet();
 
