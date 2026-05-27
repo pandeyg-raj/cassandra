@@ -55,6 +55,47 @@ public class LatencyRecorder {
         stats.clear(); // removes all keyspaces and types
         return "reset done";
     }
+
+    // ---- IO stats: compression path analysis ----
+    // Compression ON, path A: chunk was truly compressed (chunk.length < maxCompressedLength)
+    public static final LongAdder compressedChunkCount    = new LongAdder();
+    public static final LongAdder diskBytesCompressedPath = new LongAdder(); // bytes read from disk
+    public static final LongAdder logicalBytesAfterDecomp = new LongAdder(); // bytes after decompression
+
+    // Compression ON, path B: chunk was incompressible, stored raw
+    public static final LongAdder incompressibleChunkCount = new LongAdder();
+    public static final LongAdder diskBytesIncompressible  = new LongAdder();
+
+    // Compression OFF: SimpleChunkReader reads raw bytes
+    public static final LongAdder diskBytesNoCompression = new LongAdder();
+
+    public static String getIoStats() {
+        long compChunks   = compressedChunkCount.sum();
+        long incompChunks = incompressibleChunkCount.sum();
+        long diskComp     = diskBytesCompressedPath.sum();
+        long logical      = logicalBytesAfterDecomp.sum();
+        long diskIncomp   = diskBytesIncompressible.sum();
+        long diskRaw      = diskBytesNoCompression.sum();
+        double ratio      = logical == 0 ? 0.0 : (double) diskComp / logical;
+        return String.format(
+            "=== IO Stats ===%n" +
+            "compression=ON  pathA(compressed):     chunks=%d  disk=%d bytes  logical=%d bytes  ratio=%.3f%n" +
+            "compression=ON  pathB(incompressible):  chunks=%d  disk=%d bytes  (no gain, stored raw)%n" +
+            "compression=OFF (SimpleChunkReader):    disk=%d bytes",
+            compChunks,  diskComp,  logical, ratio,
+            incompChunks, diskIncomp,
+            diskRaw);
+    }
+
+    public static String resetIoStats() {
+        compressedChunkCount.reset();
+        diskBytesCompressedPath.reset();
+        logicalBytesAfterDecomp.reset();
+        incompressibleChunkCount.reset();
+        diskBytesIncompressible.reset();
+        diskBytesNoCompression.reset();
+        return "IO stats reset";
+    }
     /** Helper class to track total/count for a single keyspace/type */
     private static class LatencyStats {
         final LongAdder count = new LongAdder();
