@@ -346,6 +346,13 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
     public void resetECWriteStats() {
         ECConfig.resetCaseCounts();
     }
+    public String getIoStats() {
+        return ECConfig.getIoStats();
+    }
+    public String resetIoStats() {
+        ECConfig.resetIoStats();
+        return "IO stats reset";
+    }
 
     /* This abstraction maintains the token/endpoint metadata information */
     private TokenMetadata tokenMetadata = new TokenMetadata();

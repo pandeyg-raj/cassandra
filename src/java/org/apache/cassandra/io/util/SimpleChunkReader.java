@@ -20,6 +20,7 @@ package org.apache.cassandra.io.util;
 
 import java.nio.ByteBuffer;
 
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.io.compress.BufferType;
 
 class SimpleChunkReader extends AbstractReaderFileProxy implements ChunkReader
@@ -40,6 +41,8 @@ class SimpleChunkReader extends AbstractReaderFileProxy implements ChunkReader
         buffer.clear();
         channel.read(buffer, position);
         buffer.flip();
+        // IO stats: compression=OFF — bytes actually read from disk
+        ECConfig.diskBytesNoCompression.add(buffer.limit());
     }
 
     @Override

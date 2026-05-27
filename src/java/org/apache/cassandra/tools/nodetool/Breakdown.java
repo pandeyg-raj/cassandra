@@ -23,11 +23,14 @@ import io.airlift.airline.Option;
 import org.apache.cassandra.tools.NodeTool.NodeToolCmd;
 import org.apache.cassandra.tools.NodeProbe;
 
-@Command(name = "breakdown", description = "Show or reset LatencyRecorder stats")
+@Command(name = "breakdown", description = "Show or reset LatencyRecorder and IO compression stats")
 public class Breakdown extends NodeToolCmd
 {
-    @Option(name = {"--reset"}, description = "Reset the latency stats")
+    @Option(name = {"--reset"}, description = "Reset the latency and IO stats")
     private boolean reset = false;
+
+    @Option(name = {"--io"}, description = "Show only IO compression stats (disk bytes read vs logical bytes)")
+    private boolean io = false;
 
     @Override
     public void execute(NodeProbe probe)
@@ -35,10 +38,16 @@ public class Breakdown extends NodeToolCmd
         if (reset)
         {
             probe.output().out.println(probe.resetBreakdownTime());
+            probe.output().out.println(probe.resetIoStats());
+        }
+        else if (io)
+        {
+            probe.output().out.println(probe.getIoStats());
         }
         else
         {
             probe.output().out.println(probe.getBreakdownTime());
+            probe.output().out.println(probe.getIoStats());
         }
     }
 }

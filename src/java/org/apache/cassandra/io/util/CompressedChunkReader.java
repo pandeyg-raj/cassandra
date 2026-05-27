@@ -26,6 +26,10 @@ import java.util.function.Supplier;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.primitives.Ints;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.io.compress.BufferType;
 import org.apache.cassandra.io.compress.CompressionMetadata;
 import org.apache.cassandra.io.compress.CorruptBlockException;
@@ -34,6 +38,13 @@ import org.apache.cassandra.utils.ChecksumType;
 
 public abstract class CompressedChunkReader extends AbstractReaderFileProxy implements ChunkReader
 {
+    private static final Logger logger = LoggerFactory.getLogger(CompressedChunkReader.class);
+
+    // Log only the first N chunk reads so we can verify JPEG path without spamming logs
+    private static final int MAX_PATH_LOGS = 10;
+    private static final java.util.concurrent.atomic.AtomicInteger compressedLogCount     = new java.util.concurrent.atomic.AtomicInteger();
+    private static final java.util.concurrent.atomic.AtomicInteger incompressibleLogCount = new java.util.concurrent.atomic.AtomicInteger();
+
     final CompressionMetadata metadata;
     final int maxCompressedLength;
     final Supplier<Double> crcCheckChanceSupplier;
@@ -115,6 +126,7 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
 
                 if (chunk.length < maxCompressedLength)
                 {
+                    // PATH A: chunk was genuinely compressed
                     ByteBuffer compressed = bufferHolder.getBuffer(length);
 
                     if (channel.read(compressed, chunk.offset) != length)
@@ -143,9 +155,22 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
                     {
                         throw new CorruptBlockException(channel.filePath(), chunk, e);
                     }
+
+                    // -- IO stats: path A --
+                    ECConfig.compressedChunkCount.increment();
+                    ECConfig.diskBytesCompressedPath.add(chunk.length);
+                    ECConfig.logicalBytesAfterDecomp.add(uncompressed.capacity());
+                    if (compressedLogCount.incrementAndGet() <= MAX_PATH_LOGS)
+                        logger.info("IO-STATS path=A(compressed)  disk_bytes={}  logical_bytes={}  ratio={}"
+                                    + "  compressor={}  file={}",
+                                    chunk.length, uncompressed.capacity(),
+                                    String.format("%.3f", (double) chunk.length / uncompressed.capacity()),
+                                    metadata.compressor().getClass().getSimpleName(),
+                                    channel.filePath());
                 }
                 else
                 {
+                    // PATH B: chunk was incompressible, Cassandra stored it raw
                     uncompressed.position(0).limit(chunk.length);
                     if (channel.read(uncompressed, chunk.offset) != chunk.length)
                         throw new CorruptBlockException(channel.filePath(), chunk);
@@ -161,6 +186,16 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
                                 || scratch.getInt(0) != checksum)
                             throw new CorruptBlockException(channel.filePath(), chunk);
                     }
+
+                    // -- IO stats: path B --
+                    ECConfig.incompressibleChunkCount.increment();
+                    ECConfig.diskBytesIncompressible.add(chunk.length);
+                    if (incompressibleLogCount.incrementAndGet() <= MAX_PATH_LOGS)
+                        logger.info("IO-STATS path=B(incompressible)  chunk_size={}  max_compressed={}  "
+                                    + "compressor={}  file={}  (data stored raw, no compression gain)",
+                                    chunk.length, maxCompressedLength,
+                                    metadata.compressor().getClass().getSimpleName(),
+                                    channel.filePath());
                 }
                 uncompressed.flip();
             }

@@ -103,6 +103,46 @@ public class ECConfig
         case1Count.reset();
         case2Count.reset();
     }
+
+    // ---- IO stats: compression path analysis ----
+    // Compression ON, path A: chunk was truly compressed (chunk.length < chunkLength)
+    public static final LongAdder compressedChunkCount    = new LongAdder();
+    public static final LongAdder diskBytesCompressedPath = new LongAdder(); // bytes read from disk (compressed)
+    public static final LongAdder logicalBytesAfterDecomp = new LongAdder(); // bytes after decompression
+
+    // Compression ON, path B: chunk was incompressible, stored raw (chunk.length == chunkLength)
+    public static final LongAdder incompressibleChunkCount = new LongAdder();
+    public static final LongAdder diskBytesIncompressible  = new LongAdder(); // bytes read from disk (raw, no gain)
+
+    // Compression OFF: SimpleChunkReader reads raw bytes
+    public static final LongAdder diskBytesNoCompression = new LongAdder();
+
+    public static String getIoStats() {
+        long compChunks  = compressedChunkCount.sum();
+        long incompChunks = incompressibleChunkCount.sum();
+        long diskComp    = diskBytesCompressedPath.sum();
+        long logical     = logicalBytesAfterDecomp.sum();
+        long diskIncomp  = diskBytesIncompressible.sum();
+        long diskRaw     = diskBytesNoCompression.sum();
+        double compRatio = logical == 0 ? 0.0 : (double) diskComp / logical;
+        return String.format(
+            "=== IO Stats ===%n" +
+            "compression=ON  pathA(compressed):     chunks=%d  disk=%d bytes  logical=%d bytes  ratio=%.3f%n" +
+            "compression=ON  pathB(incompressible):  chunks=%d  disk=%d bytes  (no gain, stored raw)%n" +
+            "compression=OFF (SimpleChunkReader):    disk=%d bytes",
+            compChunks,  diskComp,   logical, compRatio,
+            incompChunks, diskIncomp,
+            diskRaw);
+    }
+
+    public static void resetIoStats() {
+        compressedChunkCount.reset();
+        diskBytesCompressedPath.reset();
+        logicalBytesAfterDecomp.reset();
+        incompressibleChunkCount.reset();
+        diskBytesIncompressible.reset();
+        diskBytesNoCompression.reset();
+    }
 // --Commented out by Inspection START (4/25/25, 9:34 PM):
     //public  static AtomicInteger TotalSignalReceived ;
     //public  static AtomicInteger TotalReplicateWriteReceived ;

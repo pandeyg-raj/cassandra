@@ -185,6 +185,12 @@ public class NodeProbe implements AutoCloseable
     public void resetECWriteStats() {
         ssProxy.resetECWriteStats();
     }
+    public String getIoStats() {
+        return ssProxy.getIoStats();
+    }
+    public String resetIoStats() {
+        return ssProxy.resetIoStats();
+    }
 
     /**
      * Creates a NodeProbe using the specified JMX host, port, username, and password.
