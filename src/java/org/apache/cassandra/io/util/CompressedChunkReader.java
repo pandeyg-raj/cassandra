@@ -122,6 +122,9 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
                 int length = shouldCheckCrc ? chunk.length + Integer.BYTES // compressed length + checksum length
                                             : chunk.length;
 
+                // per-request: count this channel.read() call before taking either path
+                LatencyRecorder.recordRequestIoChunk(chunk.length);
+
                 if (chunk.length < maxCompressedLength)
                 {
                     // PATH A: chunk was genuinely compressed

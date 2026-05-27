@@ -732,6 +732,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             if (controller.isTrackingRepairedStatus())
                 Tracing.trace("Collecting data from sstables and tracking repaired status");
             Tracing.trace("ECTRACE READ SSTABLE READ START");
+            LatencyRecorder.resetRequestIo();
             long startSStableRead = System.nanoTime();
             for (SSTableReader sstable : view.sstables)
             {
@@ -800,6 +801,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             }
             LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
+            if ("ycsb".equals(cfs.metadata().keyspace))
+            { int[] io = LatencyRecorder.REQUEST_IO.get();
+              logger.info("IO-PER-REQUEST keyspace={} table={} columns={} chunk_reads={} bytes_read={}",
+                          cfs.metadata().keyspace, cfs.metadata().name,
+                          columnFilter().queriedColumns(), io[0], io[1]); }
             if (Tracing.isTracing())
                 Tracing.trace("Skipped {}/{} non-slice-intersecting sstables, included {} due to tombstones",
                                nonIntersectingSSTables, view.sstables.size(), includedDueToTombstones);
@@ -951,6 +957,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         /* add the SSTables on disk */
         view.sstables.sort(SSTableReader.maxTimestampDescending);
         Tracing.trace("ECTRACE READ SSTABLE READ START");
+        LatencyRecorder.resetRequestIo();
         long startSStableRead = System.nanoTime();
         // read sorted sstables
         for (SSTableReader sstable : view.sstables)
@@ -1022,6 +1029,10 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         }
         LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
         Tracing.trace("ECTRACE READ SSTABLE READ STOP");
+        { int[] io = LatencyRecorder.REQUEST_IO.get();
+          logger.info("IO-PER-REQUEST keyspace={} table={} columns={} chunk_reads={} bytes_read={}",
+                      cfs.metadata().keyspace, cfs.metadata().name,
+                      columnFilter().queriedColumns(), io[0], io[1]); }
         cfs.metric.updateSSTableIterated(metricsCollector.getMergedSSTables());
 
         if (result == null || result.isEmpty())

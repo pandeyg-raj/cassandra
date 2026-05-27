@@ -43,6 +43,8 @@ class SimpleChunkReader extends AbstractReaderFileProxy implements ChunkReader
         buffer.flip();
         // IO stats: compression=OFF — bytes actually read from disk
         LatencyRecorder.diskBytesNoCompression.add(buffer.limit());
+        // per-request counter
+        LatencyRecorder.recordRequestIoChunk(buffer.limit());
     }
 
     @Override

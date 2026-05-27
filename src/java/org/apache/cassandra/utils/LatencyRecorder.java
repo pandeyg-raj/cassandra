@@ -69,6 +69,24 @@ public class LatencyRecorder {
     // Compression OFF: SimpleChunkReader reads raw bytes
     public static final LongAdder diskBytesNoCompression = new LongAdder();
 
+    // Per-request IO tracking: how many channel.read() calls + bytes per single user read
+    // int[0] = chunk read count, int[1] = bytes read
+    public static final ThreadLocal<int[]> REQUEST_IO = ThreadLocal.withInitial(() -> new int[]{0, 0});
+
+    public static void resetRequestIo()
+    {
+        int[] c = REQUEST_IO.get();
+        c[0] = 0;
+        c[1] = 0;
+    }
+
+    public static void recordRequestIoChunk(int bytes)
+    {
+        int[] c = REQUEST_IO.get();
+        c[0]++;
+        c[1] += bytes;
+    }
+
     public static String getIoStats() {
         long compChunks   = compressedChunkCount.sum();
         long incompChunks = incompressibleChunkCount.sum();
