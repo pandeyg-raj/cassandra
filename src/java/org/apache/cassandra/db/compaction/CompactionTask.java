@@ -114,6 +114,19 @@ public class CompactionTask extends AbstractCompactionTask
      */
     protected void runMayThrow() throws Exception
     {
+        LatencyRecorder.IS_COMPACTION.set(true);
+        try
+        {
+            runMayThrowInternal();
+        }
+        finally
+        {
+            LatencyRecorder.IS_COMPACTION.set(false);
+        }
+    }
+
+    private void runMayThrowInternal() throws Exception
+    {
         // The collection of sstables passed may be empty (but not null); even if
         // it is not empty, it may compact down to nothing if all rows are deleted.
         assert transaction != null;

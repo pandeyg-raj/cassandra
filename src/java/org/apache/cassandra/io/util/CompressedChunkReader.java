@@ -158,16 +158,23 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
                     }
 
                     // -- IO stats: path A --
-                    LatencyRecorder.compressedChunkCount.increment();
-                    LatencyRecorder.diskBytesCompressedPath.add(chunk.length);
-                    LatencyRecorder.logicalBytesAfterDecomp.add(uncompressed.capacity());
+                    if (LatencyRecorder.IS_COMPACTION.get()) {
+                        LatencyRecorder.compactionCompressedChunkCount.increment();
+                        LatencyRecorder.compactionDiskBytesCompressedPath.add(chunk.length);
+                        LatencyRecorder.compactionLogicalBytesAfterDecomp.add(uncompressed.capacity());
+                    } else {
+                        LatencyRecorder.compressedChunkCount.increment();
+                        LatencyRecorder.diskBytesCompressedPath.add(chunk.length);
+                        LatencyRecorder.logicalBytesAfterDecomp.add(uncompressed.capacity());
+                    }
                     if (compressedLogCount.incrementAndGet() <= MAX_PATH_LOGS)
                         logger.info("IO-STATS path=A(compressed)  disk_bytes={}  logical_bytes={}  ratio={}"
-                                    + "  compressor={}  file={}",
+                                    + "  compressor={}  file={}  compaction={}",
                                     chunk.length, uncompressed.capacity(),
                                     String.format("%.3f", (double) chunk.length / uncompressed.capacity()),
                                     metadata.compressor().getClass().getSimpleName(),
-                                    channel.filePath());
+                                    channel.filePath(),
+                                    LatencyRecorder.IS_COMPACTION.get());
                 }
                 else
                 {
@@ -189,14 +196,20 @@ public abstract class CompressedChunkReader extends AbstractReaderFileProxy impl
                     }
 
                     // -- IO stats: path B --
-                    LatencyRecorder.incompressibleChunkCount.increment();
-                    LatencyRecorder.diskBytesIncompressible.add(chunk.length);
+                    if (LatencyRecorder.IS_COMPACTION.get()) {
+                        LatencyRecorder.compactionIncompressibleChunkCount.increment();
+                        LatencyRecorder.compactionDiskBytesIncompressible.add(chunk.length);
+                    } else {
+                        LatencyRecorder.incompressibleChunkCount.increment();
+                        LatencyRecorder.diskBytesIncompressible.add(chunk.length);
+                    }
                     if (incompressibleLogCount.incrementAndGet() <= MAX_PATH_LOGS)
                         logger.info("IO-STATS path=B(incompressible)  chunk_size={}  max_compressed={}"
-                                    + "  compressor={}  file={}  (data stored raw, no compression gain)",
+                                    + "  compressor={}  file={}  compaction={}  (stored raw)",
                                     chunk.length, maxCompressedLength,
                                     metadata.compressor().getClass().getSimpleName(),
-                                    channel.filePath());
+                                    channel.filePath(),
+                                    LatencyRecorder.IS_COMPACTION.get());
                 }
                 uncompressed.flip();
             }

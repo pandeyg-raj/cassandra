@@ -48,6 +48,9 @@ public interface StorageServiceMBean extends NotificationEmitter
     public String resetBreakdownTime();
     public String getIoStats();
     public String resetIoStats();
+    public String getFullStats();
+    public String resetAllStats();
+    public String getLiveSStableStats();
 
 
     /**

@@ -1,12 +1,8 @@
 package org.apache.cassandra.utils;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
+
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import org.HdrHistogram.Histogram;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,18 +12,11 @@ public class LatencyRecorder {
     // Outer map = keyspace, Inner map = type -> LatencyStats
     private static final ConcurrentHashMap<String, ConcurrentHashMap<String, LatencyStats>> stats = new ConcurrentHashMap<>();
 
-
-
-    /**
-     * Record a latency measurement (non-blocking and cheap).
-     * Signature kept same as before.
-     */
     public static void record(String keyspace, String type, long duration) {
         stats.computeIfAbsent(keyspace, k -> new ConcurrentHashMap<>())
              .computeIfAbsent(type, t -> new LatencyStats())
              .add(duration);
     }
-
 
     public static String getBreakdownTime() {
         StringBuilder sb = new StringBuilder();
@@ -36,94 +25,146 @@ public class LatencyRecorder {
             for (var typeEntry : ksEntry.getValue().entrySet()) {
                 String type = typeEntry.getKey();
                 LatencyStats s = typeEntry.getValue();
-
                 long count = s.count.sum();
                 if (count == 0) continue;
-
                 double average = ((double) s.total.sum()) / count;
-                long min = s.min;
-                long max = s.max;
-                sb.append(String.format("%s,%s,avg=%.2f,p95=%.2f,p99=%.2f,min=%d,max=%d,count=%d%n",keyspace, type, average,s.getPercentile(95),s.getPercentile(99),s.min, s.max,count));
+                sb.append(String.format("%s,%s,avg=%.2f,p95=%.2f,p99=%.2f,min=%d,max=%d,count=%d%n",
+                          keyspace, type, average, s.getPercentile(95), s.getPercentile(99),
+                          s.min, s.max, count));
             }
         }
         if (sb.length() == 0) return "nothing here";
         return sb.toString();
     }
 
-
     public static String resetBreakdownTime() {
-        stats.clear(); // removes all keyspaces and types
+        stats.clear();
         return "reset done";
     }
 
-    // ---- IO stats: compression path analysis ----
-    // Compression ON, path A: chunk was truly compressed (chunk.length < maxCompressedLength)
-    public static final LongAdder compressedChunkCount    = new LongAdder();
-    public static final LongAdder diskBytesCompressedPath = new LongAdder(); // bytes read from disk
-    public static final LongAdder logicalBytesAfterDecomp = new LongAdder(); // bytes after decompression
+    // -------------------------------------------------------------------------
+    // Flag: set true on compaction threads so IO counters route to compaction buckets
+    // -------------------------------------------------------------------------
+    public static final ThreadLocal<Boolean> IS_COMPACTION = ThreadLocal.withInitial(() -> false);
 
-    // Compression ON, path B: chunk was incompressible, stored raw
+    // -------------------------------------------------------------------------
+    // IO stats — USER READS (compression ON, path A: genuinely compressed chunk)
+    // -------------------------------------------------------------------------
+    public static final LongAdder compressedChunkCount    = new LongAdder();
+    public static final LongAdder diskBytesCompressedPath = new LongAdder();
+    public static final LongAdder logicalBytesAfterDecomp = new LongAdder();
+
+    // IO stats — USER READS (compression ON, path B: incompressible, stored raw)
     public static final LongAdder incompressibleChunkCount = new LongAdder();
     public static final LongAdder diskBytesIncompressible  = new LongAdder();
 
-    // Compression OFF: SimpleChunkReader reads raw bytes
-    public static final LongAdder diskBytesNoCompression = new LongAdder();
+    // IO stats — USER READS (compression OFF: SimpleChunkReader)
+    public static final LongAdder noCompressionChunkCount = new LongAdder();
+    public static final LongAdder diskBytesNoCompression  = new LongAdder();
 
-    // Per-request IO tracking: how many channel.read() calls + bytes per single user read
-    // int[0] = chunk read count, int[1] = bytes read
-    public static final ThreadLocal<int[]> REQUEST_IO = ThreadLocal.withInitial(() -> new int[]{0, 0});
+    // -------------------------------------------------------------------------
+    // IO stats — COMPACTION (same three buckets, separated so user-read I/O is clean)
+    // -------------------------------------------------------------------------
+    public static final LongAdder compactionCompressedChunkCount    = new LongAdder();
+    public static final LongAdder compactionDiskBytesCompressedPath = new LongAdder();
+    public static final LongAdder compactionLogicalBytesAfterDecomp = new LongAdder();
 
-    public static void resetRequestIo()
-    {
+    public static final LongAdder compactionIncompressibleChunkCount = new LongAdder();
+    public static final LongAdder compactionDiskBytesIncompressible  = new LongAdder();
+
+    public static final LongAdder compactionNoCompressionChunkCount = new LongAdder();
+    public static final LongAdder compactionDiskBytesNoCompression  = new LongAdder();
+
+    // -------------------------------------------------------------------------
+    // Per-request IO tracking — resets before each SSTable read, read after
+    // int[0]=chunk reads (disk hits), int[1]=bytes read, int[2]=sstables in view
+    // -------------------------------------------------------------------------
+    public static final ThreadLocal<int[]> REQUEST_IO = ThreadLocal.withInitial(() -> new int[]{0, 0, 0});
+
+    public static void resetRequestIo() {
         int[] c = REQUEST_IO.get();
-        c[0] = 0;
-        c[1] = 0;
+        c[0] = 0; c[1] = 0; c[2] = 0;
     }
 
-    public static void recordRequestIoChunk(int bytes)
-    {
+    public static void recordRequestIoChunk(int bytes) {
         int[] c = REQUEST_IO.get();
         c[0]++;
         c[1] += bytes;
     }
 
+    public static void recordRequestSStable(int sstableCount) {
+        REQUEST_IO.get()[2] = sstableCount;
+    }
+
+    // -------------------------------------------------------------------------
+    // Formatted output
+    // -------------------------------------------------------------------------
     public static String getIoStats() {
-        long compChunks   = compressedChunkCount.sum();
-        long incompChunks = incompressibleChunkCount.sum();
-        long diskComp     = diskBytesCompressedPath.sum();
-        long logical      = logicalBytesAfterDecomp.sum();
-        long diskIncomp   = diskBytesIncompressible.sum();
-        long diskRaw      = diskBytesNoCompression.sum();
-        double ratio      = logical == 0 ? 0.0 : (double) diskComp / logical;
+        // User reads
+        long uc   = compressedChunkCount.sum();
+        long ud   = diskBytesCompressedPath.sum();
+        long ul   = logicalBytesAfterDecomp.sum();
+        long uic  = incompressibleChunkCount.sum();
+        long uid  = diskBytesIncompressible.sum();
+        long uncc = noCompressionChunkCount.sum();
+        long urd  = diskBytesNoCompression.sum();
+        double uratio = ul == 0 ? 0.0 : (double) ud / ul;
+
+        // Compaction reads
+        long cc   = compactionCompressedChunkCount.sum();
+        long cd   = compactionDiskBytesCompressedPath.sum();
+        long cl   = compactionLogicalBytesAfterDecomp.sum();
+        long cic  = compactionIncompressibleChunkCount.sum();
+        long cid  = compactionDiskBytesIncompressible.sum();
+        long cncc = compactionNoCompressionChunkCount.sum();
+        long crd  = compactionDiskBytesNoCompression.sum();
+        double cratio = cl == 0 ? 0.0 : (double) cd / cl;
+
         return String.format(
-            "=== IO Stats ===%n" +
-            "compression=ON  pathA(compressed):     chunks=%d  disk=%d bytes  logical=%d bytes  ratio=%.3f%n" +
-            "compression=ON  pathB(incompressible):  chunks=%d  disk=%d bytes  (no gain, stored raw)%n" +
-            "compression=OFF (SimpleChunkReader):    disk=%d bytes",
-            compChunks,  diskComp,  logical, ratio,
-            incompChunks, diskIncomp,
-            diskRaw);
+            "=== IO Stats (USER READS) ===%n" +
+            "  compression=ON  pathA(compressed):      chunks=%d  disk=%d  logical=%d  ratio=%.3f%n" +
+            "  compression=ON  pathB(incompressible):  chunks=%d  disk=%d%n" +
+            "  compression=OFF (SimpleChunkReader):    chunks=%d  disk=%d%n" +
+            "=== IO Stats (COMPACTION) ===%n" +
+            "  compression=ON  pathA(compressed):      chunks=%d  disk=%d  logical=%d  ratio=%.3f%n" +
+            "  compression=ON  pathB(incompressible):  chunks=%d  disk=%d%n" +
+            "  compression=OFF (SimpleChunkReader):    chunks=%d  disk=%d%n",
+            uc, ud, ul, uratio,
+            uic, uid,
+            uncc, urd,
+            cc, cd, cl, cratio,
+            cic, cid,
+            cncc, crd);
     }
 
     public static String resetIoStats() {
-        compressedChunkCount.reset();
-        diskBytesCompressedPath.reset();
-        logicalBytesAfterDecomp.reset();
-        incompressibleChunkCount.reset();
-        diskBytesIncompressible.reset();
-        diskBytesNoCompression.reset();
+        compressedChunkCount.reset();       diskBytesCompressedPath.reset();  logicalBytesAfterDecomp.reset();
+        incompressibleChunkCount.reset();   diskBytesIncompressible.reset();
+        noCompressionChunkCount.reset();    diskBytesNoCompression.reset();
+        compactionCompressedChunkCount.reset(); compactionDiskBytesCompressedPath.reset(); compactionLogicalBytesAfterDecomp.reset();
+        compactionIncompressibleChunkCount.reset(); compactionDiskBytesIncompressible.reset();
+        compactionNoCompressionChunkCount.reset(); compactionDiskBytesNoCompression.reset();
         return "IO stats reset";
     }
-    /** Helper class to track total/count for a single keyspace/type */
+
+    public static String resetAllStats() {
+        stats.clear();
+        resetIoStats();
+        return "all stats reset";
+    }
+
+    // -------------------------------------------------------------------------
+    // Helper
+    // -------------------------------------------------------------------------
     private static class LatencyStats {
         final LongAdder count = new LongAdder();
         final LongAdder total = new LongAdder();
         volatile long min = Long.MAX_VALUE;
         volatile long max = Long.MIN_VALUE;
         final Histogram histogram;
+
         LatencyStats() {
-        // Track values from 1µs up to 1 minute (adjust as needed), 3 sigfigs precision
-        this.histogram = new Histogram(1, 60_000_000, 3);
+            this.histogram = new Histogram(1, 60_000_000, 3);
         }
 
         void add(long duration) {
@@ -133,13 +174,9 @@ public class LatencyRecorder {
             if (duration > max) max = duration;
             histogram.recordValue(duration);
         }
-        
+
         double getPercentile(double p) {
-        return histogram.getValueAtPercentile(p);
+            return histogram.getValueAtPercentile(p);
         }
     }
 }
-
-
-
-

@@ -45,6 +45,7 @@ import org.apache.cassandra.io.sstable.format.SSTableFormat;
 import org.apache.cassandra.metrics.TableMetrics;
 import org.apache.cassandra.service.ActiveRepairService;
 import org.apache.cassandra.utils.FBUtilities;
+import org.apache.cassandra.utils.LatencyRecorder;
 
 public class Flushing
 {
@@ -188,7 +189,10 @@ public class Flushing
         @Override
         public SSTableMultiWriter call()
         {
+            long t0 = System.nanoTime();
             writeSortedContents();
+            LatencyRecorder.record(toFlush.metadata().keyspace, "MemtableFlush",
+                                   (System.nanoTime() - t0) / 1000);
             return writer;
             // We don't close the writer on error as the caller aborts all runnables if one happens.
         }

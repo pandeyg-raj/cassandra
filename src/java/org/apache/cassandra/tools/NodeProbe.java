@@ -241,6 +241,15 @@ public class NodeProbe implements AutoCloseable
     public String resetIoStats() {
         return ssProxy.resetIoStats();
     }
+    public String getFullStats() {
+        return ssProxy.getFullStats();
+    }
+    public String resetAllStats() {
+        return ssProxy.resetAllStats();
+    }
+    public String getLiveSStableStats() {
+        return ssProxy.getLiveSStableStats();
+    }
 
     /**
      * Create a connection to the JMX agent and setup the M[X]Bean proxies.

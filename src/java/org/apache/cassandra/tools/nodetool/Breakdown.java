@@ -23,29 +23,43 @@ import io.airlift.airline.Option;
 import org.apache.cassandra.tools.NodeTool.NodeToolCmd;
 import org.apache.cassandra.tools.NodeProbe;
 
-@Command(name = "breakdown", description = "Show or reset LatencyRecorder and IO compression stats")
+@Command(name = "breakdown", description = "Show or reset latency, IO, cache, flush, and SSTable stats")
 public class Breakdown extends NodeToolCmd
 {
-    @Option(name = {"--reset"}, description = "Reset the latency and IO stats")
+    @Option(name = {"--reset"}, description = "Reset all stats (latency, IO, cache)")
     private boolean reset = false;
 
-    @Option(name = {"--io"}, description = "Show only IO compression stats (disk bytes read vs logical bytes)")
+    @Option(name = {"--io"}, description = "Show only IO stats (user reads vs compaction, user+compaction split)")
     private boolean io = false;
+
+    @Option(name = {"--full"}, description = "Show full stats: latency + IO (user/compaction split) + cache hit rate")
+    private boolean full = false;
+
+    @Option(name = {"--sstables"}, description = "Show live SSTable count per table (current snapshot)")
+    private boolean sstables = false;
 
     @Override
     public void execute(NodeProbe probe)
     {
         if (reset)
         {
-            probe.output().out.println(probe.resetBreakdownTime());
-            probe.output().out.println(probe.resetIoStats());
+            probe.output().out.println(probe.resetAllStats());
+        }
+        else if (sstables)
+        {
+            probe.output().out.println(probe.getLiveSStableStats());
         }
         else if (io)
         {
             probe.output().out.println(probe.getIoStats());
         }
+        else if (full)
+        {
+            probe.output().out.println(probe.getFullStats());
+        }
         else
         {
+            // default: latency breakdown + IO split
             probe.output().out.println(probe.getBreakdownTime());
             probe.output().out.println(probe.getIoStats());
         }

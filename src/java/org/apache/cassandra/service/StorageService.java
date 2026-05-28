@@ -109,6 +109,7 @@ import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.Config.PaxosStatePurging;
 import org.apache.cassandra.config.Converters;
 import org.apache.cassandra.config.DataStorageSpec;
+import org.apache.cassandra.cache.ChunkCache;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.config.DurationSpec;
 import org.apache.cassandra.cql3.QueryHandler;
@@ -343,6 +344,47 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
     }
     public String resetIoStats() {
         return LatencyRecorder.resetIoStats();
+    }
+
+    public String getFullStats() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== LATENCY BREAKDOWN ===\n");
+        sb.append(LatencyRecorder.getBreakdownTime());
+        sb.append('\n');
+        sb.append(LatencyRecorder.getIoStats());
+        sb.append('\n');
+
+        // Cache hit/miss from Caffeine stats (recorded via ChunkCacheMetrics)
+        sb.append("=== CHUNK CACHE STATS ===\n");
+        if (ChunkCache.instance != null) {
+            long hits    = ChunkCache.instance.metrics.hits.getCount();
+            long misses  = ChunkCache.instance.metrics.misses.getCount();
+            long total   = hits + misses;
+            double rate  = total == 0 ? 0.0 : (double) hits / total * 100.0;
+            sb.append(String.format("  hits=%d  misses=%d  total=%d  hitRate=%.1f%%%n",
+                                    hits, misses, total, rate));
+        } else {
+            sb.append("  chunk cache disabled\n");
+        }
+        return sb.toString();
+    }
+
+    public String resetAllStats() {
+        if (ChunkCache.instance != null)
+            ChunkCache.instance.metrics.reset();
+        return LatencyRecorder.resetAllStats();
+    }
+
+    public String getLiveSStableStats() {
+        StringBuilder sb = new StringBuilder("=== LIVE SSTABLE COUNT ===\n");
+        for (Keyspace ks : Keyspace.all()) {
+            for (ColumnFamilyStore cfs : ks.getColumnFamilyStores()) {
+                int count = cfs.getLiveSSTables().size();
+                sb.append(String.format("  %s.%s  live_sstables=%d%n",
+                                        ks.getName(), cfs.name, count));
+            }
+        }
+        return sb.toString();
     }
 
     /* This abstraction maintains the token/endpoint metadata information */
