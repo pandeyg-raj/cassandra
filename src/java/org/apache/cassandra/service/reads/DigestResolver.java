@@ -360,9 +360,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
         }
 
-        // Count data fragments at maxTs.
+        // Count all shards (data + parity) at maxTs — need at least DATA_SHARDS to reconstruct.
         int fragmentsAtMaxTs = 0;
-        for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+        for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
         {
             if (isCodeavailable[i] && ecResponses[i].getCodeTimestamp() == maxTs)
                 fragmentsAtMaxTs++;
