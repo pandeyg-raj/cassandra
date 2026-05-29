@@ -212,6 +212,9 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             ecResponses[i] = new ECResponse();
         }
         int ShardSize =-1;
+        long wholeValueTs = Long.MIN_VALUE;
+        ByteBuffer wholeValueBuf = null;
+        ReadResponse wholeValueResponse = null;
         // EC column lookup is constant for this command — compute once instead of per-row, per-response.
         ColumnMetadata colMeta = command.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN));
 
@@ -273,13 +276,17 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                         if( isEc !=1)
                         {
                             Finalbuffer.position(0);
-                            if(isEc == 0) // whole value
+                            if(isEc == 0) // whole value — record and defer; decision made after all responses parsed
                             {
-                                Finalbuffer.position(1);
-                                ECConfig.readWholeValueCount.increment();
-                                ReadResponse tmpp = modifyCellValue(tmp, Finalbuffer.slice());
-                                return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
-
+                                long ts = c.timestamp();
+                                if (ts > wholeValueTs)
+                                {
+                                    wholeValueTs = ts;
+                                    Finalbuffer.position(1);
+                                    wholeValueBuf = Finalbuffer.slice();
+                                    wholeValueResponse = response;
+                                }
+                                continue;
                             }
                             else if ("signal".equals(ByteBufferUtil.string(Finalbuffer).substring(0, Math.min(ByteBufferUtil.string(Finalbuffer).length(), 6))))
                             {
@@ -335,26 +342,45 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
 
 
-        // Check if all available shard timestamps agree (combine/decode paths only).
-        long firstTs = -1;
-        boolean tsMatch = true;
+        // Phase 2: find maxTs across all fragments and the recorded whole value (if any).
+        long maxTs = Long.MIN_VALUE;
         for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
         {
-            if (!isCodeavailable[i])
-                continue;
-            long ts = ecResponses[i].getCodeTimestamp();
-            if (firstTs == -1)
-                firstTs = ts;
-            else if (ts != firstTs)
-            {
-                tsMatch = false;
-                break;
-            }
+            if (isCodeavailable[i] && ecResponses[i].getCodeTimestamp() > maxTs)
+                maxTs = ecResponses[i].getCodeTimestamp();
         }
-        if (tsMatch)
+        if (wholeValueTs > maxTs)
+            maxTs = wholeValueTs;
+
+        // Whole value is the freshest — return it. (Read repair path will be wired here later.)
+        if (wholeValueBuf != null && wholeValueTs == maxTs)
+        {
+            ECConfig.readWholeValueCount.increment();
+            ReadResponse tmpp = modifyCellValue(wholeValueResponse, wholeValueBuf);
+            return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
+        }
+
+        // Count data fragments at maxTs.
+        int fragmentsAtMaxTs = 0;
+        for (int i = 0; i < ECConfig.DATA_SHARDS; i++)
+        {
+            if (isCodeavailable[i] && ecResponses[i].getCodeTimestamp() == maxTs)
+                fragmentsAtMaxTs++;
+        }
+
+        if (fragmentsAtMaxTs >= ECConfig.DATA_SHARDS)
+        {
             ECConfig.readShardTimestampMatchCount.increment();
+        }
         else
+        {
+            // Not enough fragments at maxTs — a concurrent write left the cluster with a newer
+            // version we cannot reconstruct. Fall through and serve a stale/garbage value.
             ECConfig.readShardTimestampMismatchCount.increment();
+            ECConfig.readCannotReconstructLatest.increment();
+            Tracing.trace("LEAST: cannot reconstruct latest ts={}, only {}/{} data fragments at that ts — serving stale",
+                          maxTs, fragmentsAtMaxTs, ECConfig.DATA_SHARDS);
+        }
 
         // verify if decoding needed
         // no decodign needed if all data fragment present, just combine and return
