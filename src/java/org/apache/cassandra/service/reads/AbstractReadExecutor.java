@@ -30,6 +30,7 @@ import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.SinglePartitionReadCommand;
 import org.apache.cassandra.db.partitions.PartitionIterator;
 import org.apache.cassandra.db.transform.DuplicateRowChecker;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.ReadFailureException;
 import org.apache.cassandra.exceptions.ReadTimeoutException;
 import org.apache.cassandra.exceptions.UnavailableException;
@@ -68,8 +69,8 @@ public abstract class AbstractReadExecutor
     protected final ReadCommand command;
     private   final ReplicaPlan.SharedForTokenRead replicaPlan;
     protected final ReadRepair<EndpointsForToken, ReplicaPlan.ForTokenRead> readRepair;
-    protected final DigestResolver<EndpointsForToken, ReplicaPlan.ForTokenRead> digestResolver;
-    protected final ReadCallback<EndpointsForToken, ReplicaPlan.ForTokenRead> handler;
+    protected DigestResolver<EndpointsForToken, ReplicaPlan.ForTokenRead> digestResolver;
+    protected ReadCallback<EndpointsForToken, ReplicaPlan.ForTokenRead> handler;
     protected final TraceState traceState;
     protected final ColumnFamilyStore cfs;
     protected final Dispatcher.RequestTime requestTime;
@@ -99,6 +100,12 @@ public abstract class AbstractReadExecutor
         for (Replica replica : replicaPlan.contacts())
             digestVersion = Math.min(digestVersion, MessagingService.instance().versions.get(replica.endpoint()));
         command.setDigestVersion(digestVersion);
+    }
+
+    private void resetForRetry()
+    {
+        this.digestResolver = new DigestResolver<>(command, this.replicaPlan, requestTime);
+        this.handler = new ReadCallback<>(digestResolver, command, this.replicaPlan, requestTime);
     }
 
     public DecoratedKey getKey()
@@ -437,14 +444,32 @@ public abstract class AbstractReadExecutor
         // combine and set the final value
         if(digestResolver.isMyRead())
         {
-            //logger.info("RAJ Its My read");
-            PartitionIterator combined = digestResolver.myCombineResponse();
-            if (combined == null)
-                throw new ReadFailureException(replicaPlan().consistencyLevel(),
-                                               handler.blockFor, handler.blockFor,
-                                               false, java.util.Collections.emptyMap());
-            setResult(combined);
-            return;
+            for (int attempt = 0; attempt <= ECConfig.MAX_EC_READ_RETRIES; attempt++)
+            {
+                if (attempt > 0)
+                {
+                    ECConfig.readRetryCount.increment();
+                    Tracing.trace("LEAST: read retry {}/{} — not enough shards at maxTs, re-issuing",
+                                  attempt, ECConfig.MAX_EC_READ_RETRIES);
+                    try { MICROSECONDS.sleep(ECConfig.EC_READ_RETRY_BACKOFF_US); }
+                    catch (InterruptedException ie) { Thread.currentThread().interrupt(); break; }
+                    resetForRetry();
+                    executeAsync();
+                    handler.awaitResults();
+                }
+
+                PartitionIterator combined = digestResolver.myCombineResponse();
+                if (combined != null)
+                {
+                    setResult(combined);
+                    return;
+                }
+            }
+
+            ECConfig.readRetriesExhaustedCount.increment();
+            throw new ReadFailureException(replicaPlan().consistencyLevel(),
+                                           handler.blockFor, handler.blockFor,
+                                           false, java.util.Collections.emptyMap());
         }
 
         // raj debug end
