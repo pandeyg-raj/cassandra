@@ -438,7 +438,12 @@ public abstract class AbstractReadExecutor
         if(digestResolver.isMyRead())
         {
             //logger.info("RAJ Its My read");
-            setResult(digestResolver.myCombineResponse());
+            PartitionIterator combined = digestResolver.myCombineResponse();
+            if (combined == null)
+                throw new ReadFailureException(replicaPlan().consistencyLevel(),
+                                               handler.blockFor, handler.blockFor,
+                                               false, java.util.Collections.emptyMap());
+            setResult(combined);
             return;
         }
 

@@ -374,12 +374,12 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
         else
         {
-            // Not enough fragments at maxTs — a concurrent write left the cluster with a newer
-            // version we cannot reconstruct. Fall through and serve a stale/garbage value.
+            // Not enough shards at maxTs — cannot reconstruct a consistent value. Fail the read.
             ECConfig.readShardTimestampMismatchCount.increment();
             ECConfig.readCannotReconstructLatest.increment();
-            Tracing.trace("LEAST: cannot reconstruct latest ts={}, only {}/{} data fragments at that ts — serving stale",
-                          maxTs, fragmentsAtMaxTs, ECConfig.DATA_SHARDS);
+            Tracing.trace("LEAST: cannot reconstruct — only {}/{} shards at maxTs={}, failing read",
+                          fragmentsAtMaxTs, ECConfig.DATA_SHARDS, maxTs);
+            return null;
         }
 
         // verify if decoding needed
