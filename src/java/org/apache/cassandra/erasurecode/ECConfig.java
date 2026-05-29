@@ -117,15 +117,24 @@ public class ECConfig
         double pWv  = total == 0 ? 0.0 : 100.0 * wv  / total;
         double pSc  = total == 0 ? 0.0 : 100.0 * sc  / total;
         double pDec = total == 0 ? 0.0 : 100.0 * dec / total;
-        return String.format("whole_value=%d(%.1f%%) simple_combine=%d(%.1f%%) decode=%d(%.1f%%) total=%d",
-                             wv, pWv, sc, pSc, dec, pDec, total);
+        long tsMatch    = readShardTimestampMatchCount.sum();
+        long tsMismatch = readShardTimestampMismatchCount.sum();
+        return String.format(
+                "whole_value=%d(%.1f%%) simple_combine=%d(%.1f%%) decode=%d(%.1f%%) total=%d | shard_ts_match=%d shard_ts_mismatch=%d",
+                wv, pWv, sc, pSc, dec, pDec, total, tsMatch, tsMismatch);
     }
 
     public static void resetReadPathCounts() {
         readWholeValueCount.reset();
         readSimpleCombineCount.reset();
         readDecodeCount.reset();
+        readShardTimestampMatchCount.reset();
+        readShardTimestampMismatchCount.reset();
     }
+
+    // ---- Shard timestamp agreement (combine/decode paths only) ----
+    public static final LongAdder readShardTimestampMatchCount    = new LongAdder(); // all available shards share the same timestamp
+    public static final LongAdder readShardTimestampMismatchCount = new LongAdder(); // shards have differing timestamps
 
     // ---- IO stats: compression path analysis ----
     // Compression ON, path A: chunk was truly compressed (chunk.length < chunkLength)

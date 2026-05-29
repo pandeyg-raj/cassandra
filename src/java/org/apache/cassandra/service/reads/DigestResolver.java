@@ -335,6 +335,27 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         }
 
 
+        // Check if all available shard timestamps agree (combine/decode paths only).
+        long firstTs = -1;
+        boolean tsMatch = true;
+        for (int i = 0; i < ECConfig.TOTAL_SHARDS; i++)
+        {
+            if (!isCodeavailable[i])
+                continue;
+            long ts = ecResponses[i].getCodeTimestamp();
+            if (firstTs == -1)
+                firstTs = ts;
+            else if (ts != firstTs)
+            {
+                tsMatch = false;
+                break;
+            }
+        }
+        if (tsMatch)
+            ECConfig.readShardTimestampMatchCount.increment();
+        else
+            ECConfig.readShardTimestampMismatchCount.increment();
+
         // verify if decoding needed
         // no decodign needed if all data fragment present, just combine and return
         // no decoding needed/possible if whole data presend or not enough codes available
