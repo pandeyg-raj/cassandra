@@ -185,6 +185,12 @@ public class NodeProbe implements AutoCloseable
     public void resetECWriteStats() {
         ssProxy.resetECWriteStats();
     }
+    public String getECReadStats() {
+        return ssProxy.getECReadStats();
+    }
+    public void resetECReadStats() {
+        ssProxy.resetECReadStats();
+    }
     public String getIoStats() {
         return ssProxy.getIoStats();
     }

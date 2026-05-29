@@ -346,6 +346,12 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
     public void resetECWriteStats() {
         ECConfig.resetCaseCounts();
     }
+    public String getECReadStats() {
+        return ECConfig.getReadPathStats();
+    }
+    public void resetECReadStats() {
+        ECConfig.resetReadPathCounts();
+    }
     public String getIoStats() {
         return ECConfig.getIoStats();
     }

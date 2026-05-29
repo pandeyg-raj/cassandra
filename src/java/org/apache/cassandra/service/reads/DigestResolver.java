@@ -200,9 +200,10 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
         ReadResponse tmp = null;
         Collection<Message<ReadResponse>> snapshot = responses.snapshot();
 
-        if( snapshot.size() < ECConfig.DATA_SHARDS )
+        if (snapshot.size() < ECConfig.DATA_SHARDS)
         {
-            Tracing.trace("Only got {} responses:{} , needed {}",snapshot.size(),ECConfig.DATA_SHARDS);
+            Tracing.trace("Only got {} responses, needed {}", snapshot.size(), ECConfig.DATA_SHARDS);
+            return null;
         }
         //logger.error("Got responses total "+snapshot.size());
         ECResponse[] ecResponses = new ECResponse[ECConfig.TOTAL_SHARDS];//new ECResponse[snapshot.size()];
@@ -275,6 +276,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                             if(isEc == 0) // whole value
                             {
                                 Finalbuffer.position(1);
+                                ECConfig.readWholeValueCount.increment();
                                 ReadResponse tmpp = modifyCellValue(tmp, Finalbuffer.slice());
                                 return UnfilteredPartitionIterators.filter(tmpp.makeIterator(command), command.nowInSec());
 
@@ -364,6 +366,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
                     int len = Math.min(ShardSize, shard.remaining());
                     shard.get(combined, ShardSize * i, len);
                 }
+                ECConfig.readSimpleCombineCount.increment();
                 tmpp = modifyCellValue(tmp, ByteBuffer.wrap(combined));
 
                 try
@@ -428,6 +431,7 @@ public class DigestResolver<E extends Endpoints<E>, P extends ReplicaPlan.ForRea
             LatencyRecorder.record(command.metadata().keyspace,"decoding", (System.nanoTime() - startDecoding)/1000);
             Tracing.trace("ECTRACE READ DECODING STOP");
 
+            ECConfig.readDecodeCount.increment();
             tmpp = modifyCellValue(tmp, ByteBuffer.wrap(decoded));
 
             try{

@@ -235,7 +235,8 @@ public class NodeTool
                 ViewBuildStatus.class,
                 ForceCompact.class,
                 Breakdown.class,
-                ECWriteStats.class
+                ECWriteStats.class,
+                ECReadStats.class
         );
 
         Cli.CliBuilder<NodeToolCmdRunnable> builder = Cli.builder("nodetool");

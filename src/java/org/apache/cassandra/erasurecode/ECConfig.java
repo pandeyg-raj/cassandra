@@ -104,6 +104,29 @@ public class ECConfig
         case2Count.reset();
     }
 
+    // ---- Read path counters: which block returned the result ----
+    public static final LongAdder readWholeValueCount  = new LongAdder(); // whole value found in replica response
+    public static final LongAdder readSimpleCombineCount = new LongAdder(); // all K data shards present, no decode
+    public static final LongAdder readDecodeCount      = new LongAdder(); // erasure decode was needed
+
+    public static String getReadPathStats() {
+        long wv    = readWholeValueCount.sum();
+        long sc    = readSimpleCombineCount.sum();
+        long dec   = readDecodeCount.sum();
+        long total = wv + sc + dec;
+        double pWv  = total == 0 ? 0.0 : 100.0 * wv  / total;
+        double pSc  = total == 0 ? 0.0 : 100.0 * sc  / total;
+        double pDec = total == 0 ? 0.0 : 100.0 * dec / total;
+        return String.format("whole_value=%d(%.1f%%) simple_combine=%d(%.1f%%) decode=%d(%.1f%%) total=%d",
+                             wv, pWv, sc, pSc, dec, pDec, total);
+    }
+
+    public static void resetReadPathCounts() {
+        readWholeValueCount.reset();
+        readSimpleCombineCount.reset();
+        readDecodeCount.reset();
+    }
+
     // ---- IO stats: compression path analysis ----
     // Compression ON, path A: chunk was truly compressed (chunk.length < chunkLength)
     public static final LongAdder compressedChunkCount    = new LongAdder();
