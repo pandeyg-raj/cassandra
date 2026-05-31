@@ -53,6 +53,7 @@ import org.apache.cassandra.net.Verb;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.ClientState;
 import org.apache.cassandra.service.StorageProxy;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.transport.Dispatcher;
 
@@ -327,13 +328,16 @@ public class PartitionRangeReadCommand extends ReadCommand implements PartitionR
         try
         {
             SSTableReadsListener readCountUpdater = newReadCountUpdater();
+            long startMemtableRead = System.nanoTime();
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredPartitionIterator iter = memtable.partitionIterator(columnFilter(), dataRange(), readCountUpdater);
                 controller.updateMinOldestUnrepairedTombstone(memtable.getMinLocalDeletionTime());
                 inputCollector.addMemtableIterator(RTBoundValidator.validate(iter, RTBoundValidator.Stage.MEMTABLE, false));
             }
+            LatencyRecorder.record(cfs.metadata().keyspace, "MemtableRead", (System.nanoTime() - startMemtableRead) / 1000);
 
+            long startSStableRead = System.nanoTime();
             int selectedSSTablesCnt = 0;
             for (SSTableReader sstable : view.sstables)
             {
@@ -352,6 +356,7 @@ public class PartitionRangeReadCommand extends ReadCommand implements PartitionR
 
                 selectedSSTablesCnt++;
             }
+            LatencyRecorder.record(cfs.metadata().keyspace, "SStableRead", (System.nanoTime() - startSStableRead) / 1000);
 
             final int finalSelectedSSTables = selectedSSTablesCnt;
 
