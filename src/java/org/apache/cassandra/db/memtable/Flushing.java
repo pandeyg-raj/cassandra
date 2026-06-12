@@ -39,6 +39,7 @@ import org.apache.cassandra.db.commitlog.IntervalSet;
 import org.apache.cassandra.db.lifecycle.LifecycleTransaction;
 import org.apache.cassandra.db.partitions.Partition;
 import org.apache.cassandra.db.rows.UnfilteredRowIterator;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.io.sstable.Descriptor;
 import org.apache.cassandra.io.sstable.SSTableMultiWriter;
 import org.apache.cassandra.io.sstable.format.SSTableFormat;
@@ -188,7 +189,10 @@ public class Flushing
         @Override
         public SSTableMultiWriter call()
         {
+            long t0 = System.nanoTime();
             writeSortedContents();
+            LatencyRecorder.record(toFlush.metadata().keyspace, "MemtableFlush",
+                                   (System.nanoTime() - t0) / 1000);
             return writer;
             // We don't close the writer on error as the caller aborts all runnables if one happens.
         }
