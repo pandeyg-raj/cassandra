@@ -152,6 +152,7 @@ import org.apache.cassandra.utils.MonotonicClock;
 import org.apache.cassandra.utils.NoSpamLogger;
 import org.apache.cassandra.utils.Pair;
 import org.apache.cassandra.utils.TimeUUID;
+import org.apache.cassandra.utils.concurrent.AsyncPromise;
 import org.apache.cassandra.utils.concurrent.CountDownLatch;
 import org.apache.cassandra.utils.concurrent.UncheckedInterruptedException;
 
@@ -169,6 +170,7 @@ import static org.apache.cassandra.metrics.ClientRequestsMetricsHolder.writeMetr
 import static org.apache.cassandra.net.Message.out;
 import static org.apache.cassandra.net.NoPayload.noPayload;
 import static org.apache.cassandra.net.Verb.BATCH_STORE_REQ;
+import static org.apache.cassandra.net.Verb.EC_SIGNAL_REQ;
 import static org.apache.cassandra.net.Verb.MUTATION_REQ;
 import static org.apache.cassandra.net.Verb.PAXOS_COMMIT_REQ;
 import static org.apache.cassandra.net.Verb.PAXOS_PREPARE_REQ;
@@ -1244,14 +1246,40 @@ public class StorageProxy implements StorageProxyMBean
                             //logger.error("mutationBuilder2:"+mutationBuilder);
                             Mutation signalMutation = mutationBuilder.build();
                             signalMutation.isEcSignalMuattion = true;
-                            //logger.error("signalMutation:"+signalMutation);
-                            //logger.error("final signaal mutation"+signalMutation.getPartitionUpdates().iterator().next().getRow(Clustering.EMPTY));
-                            List<Mutation>  signalMutations = new ArrayList<>();
-                            signalMutations.add(signalMutation);
-                            //logger.error("3 Write sending EC signal outside "+  Thread.currentThread().getId());
-                            mutateEcSignal(signalMutations, consistencyLevel, requestTime);
-                            //mutate(signalMutations, consistencyLevel, requestTime);
-                            //logger.error("4 Write  EC signal finished outside "+  Thread.currentThread().getId());
+
+                            // Send the EC signal to exactly the same replicas the first-round
+                            // (replicated) write targeted: build the identical write plan via
+                            // ReplicaPlans.writeNormal — the very selector performWrite() uses
+                            // for the client write. Each replica re-reads its locally stored
+                            // value and erasure-codes it, so the signal MUST reach the same set
+                            // that holds that value. CL.ANY because this background, fire-and-
+                            // forget signal must never throw UnavailableException.
+                            Keyspace ks = Keyspace.open(signalMutation.getKeyspaceName());
+                            Token tk = signalMutation.key().getToken();
+                            ReplicaPlan.ForWrite ecPlan =
+                                ReplicaPlans.forWrite(ks, ConsistencyLevel.ANY, tk, ReplicaPlans.writeNormal);
+
+                            // serialize once for the N remote sends
+                            Mutation.serializer.prepareSerializedBuffer(signalMutation, MessagingService.current_version);
+                            Message<Mutation> ecMsg = out(EC_SIGNAL_REQ, signalMutation);
+
+                            for (Replica destination : ecPlan.contacts())
+                            {
+                                // a down replica never received the first-round value, so it has
+                                // nothing to encode — skip (fire-and-forget, no hint required).
+                                if (!ecPlan.isAlive(destination))
+                                    continue;
+
+                                if (destination.isSelf())
+                                    // local replica: encode on the dedicated EC_SIGNAL stage,
+                                    // off Stage.MUTATION and off the network loopback entirely.
+                                    Stage.EC_SIGNAL.execute(() ->
+                                        ks.applySignalRMW(signalMutation, true, true, true, true, new AsyncPromise<>()));
+                                else
+                                    // remote replica: EC_SIGNAL_REQ dispatches on the peer's
+                                    // EC_SIGNAL stage via EcSignalVerbHandler (no response).
+                                    MessagingService.instance().send(ecMsg, destination.endpoint());
+                            }
                         }
                         catch (Exception e)    //catch (CharacterCodingException e)
                         {
@@ -1767,18 +1795,7 @@ public class StorageProxy implements StorageProxyMBean
         {
             for (Replica destination : localDc)
             {
-                if(mutation.isEcSignalMuattion)
-                {
-                    // dont care about signal mutation response
-                    MessagingService.instance().send(message, destination.endpoint());
-                    responseHandler.onResponse(null); // manually satisfy ack for fire-and-forget; // null = "local write satisfied",
-
-                    //ECConfig.TotalSignalSent.incrementAndGet();
-                }
-                else
-                {
-                    MessagingService.instance().sendWriteWithCallback(message, destination, responseHandler);
-                }
+                MessagingService.instance().sendWriteWithCallback(message, destination, responseHandler);
             }
         }
         if (dcGroups != null)

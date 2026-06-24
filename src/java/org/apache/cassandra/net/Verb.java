@@ -35,6 +35,7 @@ import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.db.CounterMutation;
 import org.apache.cassandra.db.CounterMutationVerbHandler;
 import org.apache.cassandra.db.Mutation;
+import org.apache.cassandra.db.EcSignalVerbHandler;
 import org.apache.cassandra.db.MutationVerbHandler;
 import org.apache.cassandra.db.ReadCommand;
 import org.apache.cassandra.db.ReadCommandVerbHandler;
@@ -221,7 +222,9 @@ public enum Verb
     @Deprecated(since = "4.0")
     INTERNAL_RSP           (23,  P1, rpcTimeout,      INTERNAL_RESPONSE, () -> null,                                 () -> ResponseVerbHandler.instance                             ),
 
-    // largest used ID: 116
+    EC_SIGNAL_REQ          (117, P3, writeTimeout,    EC_SIGNAL,         () -> Mutation.serializer,                  () -> EcSignalVerbHandler.instance                            ),
+
+    // largest used ID: 117
 
     // CUSTOM VERBS
     UNUSED_CUSTOM_VERB     (CUSTOM,

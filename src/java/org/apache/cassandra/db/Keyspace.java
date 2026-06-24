@@ -57,7 +57,6 @@ import org.apache.cassandra.db.view.ViewManager;
 import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.erasurecode.ErasureCode;
 import org.apache.cassandra.erasurecode.LatencyRecorder;
-import org.apache.cassandra.erasurecode.PriorityThreadPoolUtil;
 import org.apache.cassandra.exceptions.WriteTimeoutException;
 import org.apache.cassandra.index.Index;
 import org.apache.cassandra.index.SecondaryIndexManager;
@@ -541,17 +540,6 @@ public class Keyspace
                                                Promise<?> future)
     {
         
-        //if(IsRMWSignalMutation(mutation))
-        if (mutation.isEcSignalMuattion && !mutation.isEcFragmentWrite)
-        {
-            PriorityThreadPoolUtil.getExecutor().submit(() ->
-                                                        applySignalRMW(mutation, makeDurable, updateIndexes, isDroppable, isDeferrable, future));
-            return future;
-
-            //return  applySignalRMW(mutation, makeDurable,updateIndexes, isDroppable,isDeferrable, future);
-
-        }
-
         if (TEST_FAIL_WRITES && metadata.name.equals(TEST_FAIL_WRITES_KS))
             throw new RuntimeException("Testing write failures");
 
