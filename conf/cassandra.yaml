@@ -756,10 +756,10 @@ memtable:
 # If omitted, Cassandra will set both to 1/4 the size of the heap.
 # Min unit: MiB
 #memtable_heap_space: 4096MiB
-memtable_heap_space: 2048MiB
+#memtable_heap_space: 2048MiB
 # Min unit: MiB
 #memtable_offheap_space: 4096MiB
-memtable_offheap_space: 8192MiB
+#memtable_offheap_space: 8192MiB
 
 # memtable_cleanup_threshold is deprecated. The default calculation
 # is the only reasonable choice. See the comments on  memtable_flush_writers
