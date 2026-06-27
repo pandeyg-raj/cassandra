@@ -60,9 +60,10 @@ public class LatencyRecorder {
                 long count = b.count.sum();
                 if (count == 0) continue;
                 long total = b.total.sum();
+                double totalGb = total / 1.0e9;   // 1 GB = 1000^3 bytes
                 double average = ((double) total) / count;
-                sb.append(String.format("%s,%s,total_bytes=%d,avg_bytes=%.2f,count=%d%n",
-                          keyspace, type, total, average, count));
+                sb.append(String.format("%s,%s,total_gb=%.3f,avg_bytes=%.2f,count=%d%n",
+                          keyspace, type, totalGb, average, count));
             }
         }
 
