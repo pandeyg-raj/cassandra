@@ -282,6 +282,8 @@ public class CompactionTask extends AbstractCompactionTask
             LatencyRecorder.record("keyspace","Compaction", currentTimeMillis() - startTime);
             // update the metrics
             cfs.metric.compactionBytesWritten.inc(endsize);
+            // Record actual on-disk bytes written by this compaction for the breakdown hook.
+            LatencyRecorder.recordBytes(cfs.getKeyspaceName(), "CompactionBytes", endsize);
         }
     }
 

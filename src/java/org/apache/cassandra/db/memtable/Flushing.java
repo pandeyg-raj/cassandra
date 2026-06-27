@@ -183,6 +183,8 @@ public class Flushing
                             toFlush.memtable().getFinalCommitLogUpperBound());
                 // Update the metrics
                 metrics.bytesFlushed.inc(bytesFlushed);
+                // Record actual on-disk bytes written by this flush for the breakdown hook.
+                LatencyRecorder.recordBytes(toFlush.metadata().keyspace, "MemtableFlushBytes", writer.getOnDiskBytesWritten());
             }
         }
 

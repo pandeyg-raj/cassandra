@@ -44,6 +44,7 @@ import org.apache.cassandra.config.Config;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.config.ParameterizedClass;
 import org.apache.cassandra.db.Mutation;
+import org.apache.cassandra.erasurecode.LatencyRecorder;
 import org.apache.cassandra.exceptions.CDCWriteException;
 import org.apache.cassandra.io.FSWriteError;
 import org.apache.cassandra.io.compress.ICompressor;
@@ -308,6 +309,7 @@ public class CommitLog implements CommitLogMBean
             Mutation.serializer.serialize(mutation, dob, MessagingService.current_version);
             int size = dob.getLength();
             int totalSize = size + ENTRY_OVERHEAD_SIZE;
+            LatencyRecorder.recordBytes(mutation.getKeyspaceName(), "CommitLogBytes", totalSize);
             Allocation alloc = segmentManager.allocate(mutation, totalSize);
 
             CRC32 checksum = new CRC32();
