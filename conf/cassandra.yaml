@@ -842,9 +842,9 @@ memtable_allocation_type: offheap_objects
 #
 # The default value is the smaller of 8192, and 1/4 of the total space
 # of the commitlog volume.
-#
-# commitlog_total_space: 8192MiB
-commitlog_total_space: 1024MiB
+# default 8192
+commitlog_total_space: 8192MiB
+#commitlog_total_space: 1024MiB
 
 # This sets the number of memtable flush writer threads per disk
 # as well as the total number of memtables that can be flushed concurrently.
