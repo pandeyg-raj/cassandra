@@ -897,9 +897,10 @@ public class Keyspace
                                           //                                              applyInternal(ECmutation, makeDurable, true, isDroppable, true, future));
 
 
-                                            // Options 1+2: synchronous call (no dispatch) + makeDurable=false (no commitlog).
-                                            // Runs on the PriorityThreadPoolUtil thread that started applySignalRMW.
-                                            return applyInternal(ECmutation, false, true, isDroppable, true, future);
+                                            // Synchronous call (no dispatch). Durability of the EC fragment
+                                            // write is controlled by ECConfig.SIGNAL_WRITE_DURABLE (loaded
+                                            // from ECConfig.yaml); false (default) skips the commitlog.
+                                            return applyInternal(ECmutation, ECConfig.SIGNAL_WRITE_DURABLE, true, isDroppable, true, future);
 
 
 

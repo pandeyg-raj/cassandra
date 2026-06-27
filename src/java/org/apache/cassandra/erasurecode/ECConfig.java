@@ -67,6 +67,9 @@ public class ECConfig
     public static int PARITY_SHARDS ;
     public static int TOTAL_SHARDS ;
     public static String EC_COLUMN;
+    // If true, the EC fragment write (in Keyspace.applySignalRMW) is made durable
+    // (written to the commitlog). If false (default), the fragment skips the commitlog.
+    public static boolean SIGNAL_WRITE_DURABLE ;
     public static String SignalStr ;
     // Pre-built signal strings, one per rotation r in [0, TOTAL_SHARDS).
     // SignalStrs[r] rotates every node's shard index by r (modulo TOTAL_SHARDS),
@@ -250,6 +253,12 @@ public class ECConfig
             PARITY_SHARDS = (int) data.get("parity_shards");
             TOTAL_SHARDS = DATA_SHARDS + PARITY_SHARDS ;
             EC_COLUMN = data.get("ec_column").toString();
+
+            // Optional: controls whether the EC fragment write is durable (commitlog).
+            // Defaults to false (skip commitlog) when the key is absent, preserving prior behavior.
+            Object signalDurableObj = data.get("signal_write_durable");
+            SIGNAL_WRITE_DURABLE = signalDurableObj != null && (boolean) signalDurableObj;
+            logger.error("EC SIGNAL_WRITE_DURABLE = {}", SIGNAL_WRITE_DURABLE);
 
             SignalStr ="signal," +
                        String.valueOf(TOTAL_SHARDS) +"," +

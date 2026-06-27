@@ -7,6 +7,10 @@ ec_column: 'field0'
 data_shards: 3
 parity_shards: 2
 
+# If true, the EC fragment write is made durable (written to the commitlog).
+# If false (or omitted), the fragment skips the commitlog (default behavior).
+signal_write_durable: false
+
 #cordinate exclude
 #ec_configs: "8,10.158.34.18:0,10.158.34.23:1,10.158.34.24:2,10.158.34.25:3,10.158.34.26:4,10.0.0.51:0,10.0.0.52:1,10.0.0.53:2"
     
