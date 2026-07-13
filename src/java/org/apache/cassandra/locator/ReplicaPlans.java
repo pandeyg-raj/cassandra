@@ -36,6 +36,7 @@ import org.apache.cassandra.db.PartitionPosition;
 import org.apache.cassandra.dht.AbstractBounds;
 import org.apache.cassandra.dht.Range;
 import org.apache.cassandra.dht.Token;
+import org.apache.cassandra.erasurecode.ECConfig;
 import org.apache.cassandra.exceptions.UnavailableException;
 import org.apache.cassandra.gms.FailureDetector;
 import org.apache.cassandra.index.Index;
@@ -514,7 +515,7 @@ public class ReplicaPlans
 
         // TODO: this should use assureSufficientReplicas
         int participants = liveAndDown.all().size();
-        int requiredParticipants = participants / 2 + 1; // See CASSANDRA-8346, CASSANDRA-833
+        int requiredParticipants = ECConfig.DATA_SHARDS + ((ECConfig.PARITY_SHARDS + 1) / 2); // LEAST: Paxos quorum aligned with EC_QUORUM (4 of 5 for K=3,M=2)
 
         EndpointsForToken contacts = live.all();
         if (contacts.size() < requiredParticipants)

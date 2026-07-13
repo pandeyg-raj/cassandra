@@ -353,7 +353,9 @@ public class StorageProxy implements StorageProxyMBean
                 // read the current values and check they validate the conditions
                 Tracing.trace("Reading existing values for CAS precondition");
                 SinglePartitionReadCommand readCommand = request.readCommand(nowInSeconds);
-                ConsistencyLevel readConsistency = consistencyForPaxos == ConsistencyLevel.LOCAL_SERIAL ? ConsistencyLevel.LOCAL_QUORUM : ConsistencyLevel.QUORUM;
+                // ConsistencyLevel readConsistency = consistencyForPaxos == ConsistencyLevel.LOCAL_SERIAL ? ConsistencyLevel.LOCAL_QUORUM : ConsistencyLevel.QUORUM;
+                // LEAST: CAS Phase 2 read runs at EC_QUORUM so the read reconstructs from data+parity shards
+                ConsistencyLevel readConsistency = consistencyForPaxos == ConsistencyLevel.LOCAL_SERIAL ? ConsistencyLevel.LOCAL_QUORUM : ConsistencyLevel.EC_QUORUM;
 
                 FilteredPartition current;
                 try (RowIterator rowIter = readOne(readCommand, readConsistency, requestTime))
