@@ -107,10 +107,16 @@ public class ECConfig
         case2Count.reset();
     }
 
+    // ---- Read retry config ----
+    public static int MAX_EC_READ_RETRIES      = 5;
+    public static long EC_READ_RETRY_BACKOFF_US = 2000;
+
     // ---- Read path counters: which block returned the result ----
     public static final LongAdder readWholeValueCount  = new LongAdder(); // whole value found in replica response
     public static final LongAdder readSimpleCombineCount = new LongAdder(); // all K data shards present, no decode
     public static final LongAdder readDecodeCount      = new LongAdder(); // erasure decode was needed
+    public static final LongAdder readRetryCount           = new LongAdder(); // retries issued due to cannot_reconstruct
+    public static final LongAdder readRetriesExhaustedCount = new LongAdder(); // retries exhausted, read failed
 
     public static String getReadPathStats() {
         long wv    = readWholeValueCount.sum();
@@ -122,9 +128,12 @@ public class ECConfig
         double pDec = total == 0 ? 0.0 : 100.0 * dec / total;
         long tsMatch    = readShardTimestampMatchCount.sum();
         long tsMismatch = readShardTimestampMismatchCount.sum();
+        long cantReconstruct = readCannotReconstructLatest.sum();
+        long retries = readRetryCount.sum();
+        long exhausted = readRetriesExhaustedCount.sum();
         return String.format(
-                "whole_value=%d(%.1f%%) simple_combine=%d(%.1f%%) decode=%d(%.1f%%) total=%d | shard_ts_match=%d shard_ts_mismatch=%d",
-                wv, pWv, sc, pSc, dec, pDec, total, tsMatch, tsMismatch);
+                "whole_value=%d(%.1f%%) simple_combine=%d(%.1f%%) decode=%d(%.1f%%) total=%d | shard_ts_match=%d shard_ts_mismatch=%d cannot_reconstruct_latest=%d retries=%d retries_exhausted=%d",
+                wv, pWv, sc, pSc, dec, pDec, total, tsMatch, tsMismatch, cantReconstruct, retries, exhausted);
     }
 
     public static void resetReadPathCounts() {
@@ -133,11 +142,15 @@ public class ECConfig
         readDecodeCount.reset();
         readShardTimestampMatchCount.reset();
         readShardTimestampMismatchCount.reset();
+        readCannotReconstructLatest.reset();
+        readRetryCount.reset();
+        readRetriesExhaustedCount.reset();
     }
 
     // ---- Shard timestamp agreement (combine/decode paths only) ----
     public static final LongAdder readShardTimestampMatchCount    = new LongAdder(); // all available shards share the same timestamp
     public static final LongAdder readShardTimestampMismatchCount = new LongAdder(); // shards have differing timestamps
+    public static final LongAdder readCannotReconstructLatest     = new LongAdder(); // not enough fragments at maxTs — served stale
 
     // ---- IO stats: compression path analysis ----
     // Compression ON, path A: chunk was truly compressed (chunk.length < chunkLength)

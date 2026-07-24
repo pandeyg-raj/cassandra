@@ -2106,12 +2106,6 @@ public class StorageProxy implements StorageProxyMBean
             }
         }
 
-        // update read to ecquorum
-        if (consistencyLevel == ConsistencyLevel.QUORUM)
-        {
-            consistencyLevel = ConsistencyLevel.EC_QUORUM;
-        }
-
         return consistencyLevel.isSerialConsistency()
              ? readWithPaxos(group, consistencyLevel, requestTime)
              : readRegular(group, consistencyLevel, requestTime);
@@ -2359,7 +2353,7 @@ public class StorageProxy implements StorageProxyMBean
             //raj debug
             if(commands.get(i).metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)) !=null)
             {
-                consistencyLevel = ConsistencyLevel.QUORUM;
+                consistencyLevel = ConsistencyLevel.EC_QUORUM;
             }
             //raj debug end
             reads[i] = AbstractReadExecutor.getReadExecutor(commands.get(i),
