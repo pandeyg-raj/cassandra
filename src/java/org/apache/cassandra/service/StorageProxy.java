@@ -896,9 +896,30 @@ public class StorageProxy implements StorageProxyMBean
             for (IMutation mutation : mutations)
             {
                 if (mutation instanceof CounterMutation)
+                {
                     responseHandlers.add(mutateCounter((CounterMutation)mutation, localDataCenter, requestTime));
+                }
                 else
-                    responseHandlers.add(performWrite(mutation, consistencyLevel, localDataCenter, standardWritePerformer, null, plainWriteType, requestTime));
+                {
+                    AbstractWriteResponseHandler<IMutation> handler =
+                        performWrite(mutation, consistencyLevel, localDataCenter, standardWritePerformer, null, plainWriteType, requestTime);
+                    // LEAST: for EC-column writes, dispatch the round-2 EC signal once the EC-signal CL
+                    // is reached. The signal must never fire before the client is acked, so if the
+                    // EC-signal CL is lower than the client-ack CL (e.g. client asked for ALL), gate on
+                    // the client CL instead. Fires event-driven when that ack lands; the handler's
+                    // onFailure fast-fail covers the case where failures/timeouts make it unreachable.
+                    if (isEcColumnMutation(mutation))
+                    {
+                        int clientThreshold = handler.writeThresholdFor(consistencyLevel);
+                        int signalThreshold = handler.writeThresholdFor(ECConfig.WRITE_SIGNAL_CL);
+                        if (signalThreshold < clientThreshold)
+                            signalThreshold = clientThreshold;
+                        handler.setEcSignalTrigger(signalThreshold,
+                            () -> PriorityThreadPoolUtil.getExecutor().submit(
+                                      () -> sendECSignal(java.util.Collections.singletonList(mutation), consistencyLevel, requestTime)));
+                    }
+                    responseHandlers.add(handler);
+                }
             }
 
             // upgrade to full quorum any failed cheap quorums
@@ -1188,6 +1209,16 @@ public class StorageProxy implements StorageProxyMBean
         }
     }
 
+    // LEAST: true if this mutation targets a table that carries the EC column (i.e. an erasure-coded
+    // write that should trigger a round-2 signal). Matches the read-side EC detection in fetchRows().
+    private static boolean isEcColumnMutation(IMutation mutation)
+    {
+        for (PartitionUpdate pu : mutation.getPartitionUpdates())
+            if (pu.metadata().getColumn(ByteBufferUtil.bytes(ECConfig.EC_COLUMN)) != null)
+                return true;
+        return false;
+    }
+
     public static void  sendECSignal(List<? extends IMutation> mutations,
                                     ConsistencyLevel consistencyLevel,
                                     Dispatcher.RequestTime requestTime)
@@ -1347,38 +1378,17 @@ public class StorageProxy implements StorageProxyMBean
 
                 //logger.error("Write sent count: "+ECConfig.writeCount.getAndIncrement());
                 //logger.error( "1 replicated Write starting outside "+  Thread.currentThread().getId() );
-                if( (!mutations.isEmpty()) && ( mutations.get(0).getPartitionUpdates().iterator().next().metadata().getColumn(ByteBufferUtil.bytes("field0")) != null) && (consistencyLevel != ConsistencyLevel.ALL))
+                // LEAST: override the client-supplied CL to the LEAST client-ack CL for EC-column
+                // writes (except when the client explicitly asked for ALL).
+                if (!mutations.isEmpty() && isEcColumnMutation(mutations.get(0)) && consistencyLevel != ConsistencyLevel.ALL)
                 {
-                    consistencyLevel = ConsistencyLevel.QUORUM;
+                    consistencyLevel = ECConfig.WRITE_CLIENT_CL;
                 }
 
+                // LEAST: the round-2 EC signal is no longer dispatched here. It is now driven by the
+                // write response handler (see mutate() -> setEcSignalTrigger), which fires it once the
+                // EC-signal consistency level (EC_QUORUM) is reached, rather than at the client-ack CL.
                 mutate(mutations, consistencyLevel, requestTime);
-                //ECConfig.TotalReplicateWriteSent.incrementAndGet();
-                //logger.error("2 replicated Write finished outside "+  Thread.currentThread().getId());
-
-                //PriorityThreadPoolUtil.printThreadPollInfo();
-                //sendECSignal(mutations,consistencyLevel, requestTime);
-                //long start = System.nanoTime();
-
-
-                ConsistencyLevel finalConsistencyLevel = consistencyLevel;
-                PriorityThreadPoolUtil.getExecutor().submit(() -> sendECSignal(mutations, finalConsistencyLevel, requestTime));
-
-                /*
-                ECConfig.ECStage.execute(() -> {
-                    sendECSignal(mutations, finalConsistencyLevel, requestTime);
-                });
-                */
-
-                //TimeTakenThreadSpawn.add(System.nanoTime() - start);
-                //logger.error("total sig Time(us):{}", TimeTakenThreadSpawn.sum() / 1000);
-
-                /*
-                Thread thread = new Thread(new Runnable() {
-                    @Override
-                 public void run() {sendECSignal(mutations,consistencyLevel, requestTime);}});
-                thread.start();
-                */
             }
         }
     }

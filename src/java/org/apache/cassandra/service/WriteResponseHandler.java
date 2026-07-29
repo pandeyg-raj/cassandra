@@ -59,6 +59,8 @@ public class WriteResponseHandler<T> extends AbstractWriteResponseHandler<T>
     {
         if (responsesUpdater.decrementAndGet(this) == 0)
             signal();
+        // LEAST: fire the EC signal once this write reaches the (higher) EC-signal ack threshold.
+        maybeFireEcSignal();
         //Must be last after all subclass processing
         //The two current subclasses both assume logResponseToIdealCLDelegate is called
         //here.

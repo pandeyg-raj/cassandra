@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.concurrent.ExecutorPlus;
+import org.apache.cassandra.db.ConsistencyLevel;
 import org.yaml.snakeyaml.Yaml;
 
 public class ECConfig
@@ -70,6 +71,14 @@ public class ECConfig
     // If true, the EC fragment write (in Keyspace.applySignalRMW) is made durable
     // (written to the commitlog). If false (default), the fragment skips the commitlog.
     public static boolean SIGNAL_WRITE_DURABLE ;
+
+    // ---- LEAST write consistency levels ----
+    // WRITE_CLIENT_CL: acks returned to the client. For EC-column writes the client-supplied CL is
+    //                  overridden to this value (except when the client asks for ALL).
+    // WRITE_SIGNAL_CL: acks required before the round-2 EC signal is dispatched (typically higher).
+    // Hardcoded for now; can later be loaded from ECConfig.yaml in initECConfig().
+    public static ConsistencyLevel WRITE_CLIENT_CL = ConsistencyLevel.TWO;
+    public static ConsistencyLevel WRITE_SIGNAL_CL = ConsistencyLevel.EC_QUORUM;
     public static String SignalStr ;
     // Pre-built signal strings, one per rotation r in [0, TOTAL_SHARDS).
     // SignalStrs[r] rotates every node's shard index by r (modulo TOTAL_SHARDS),

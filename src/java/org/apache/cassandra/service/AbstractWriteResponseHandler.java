@@ -20,6 +20,7 @@ package org.apache.cassandra.service;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.Function;
@@ -92,6 +93,16 @@ public abstract class AbstractWriteResponseHandler<T> implements RequestCallback
      * We don't want to increment the writeFailedIdealCL if we didn't achieve the original requested CL
      */
     private boolean requestedCLAchieved = false;
+
+    // ---- LEAST: EC-signal gating ----
+    // LEAST uses two write consistency levels: the client-ack CL (how many acks before returning
+    // to the client, tracked by blockFor()/signal()), and a separate, usually higher, EC-signal CL
+    // (how many acks before dispatching the round-2 erasure-coding signal). ecSignalTask is a
+    // one-shot dispatch of that signal, fired exactly once when ackCount() first reaches
+    // ecSignalThreshold, or by the fallback path if the threshold can no longer be reached.
+    private volatile Runnable ecSignalTask;
+    private volatile int ecSignalThreshold;
+    private final AtomicBoolean ecSignalFired = new AtomicBoolean(false);
 
     /**
      * @param callback           A callback to be called when the write is successful.
@@ -250,6 +261,16 @@ public abstract class AbstractWriteResponseHandler<T> implements RequestCallback
     }
 
     /**
+     * LEAST: the blockForWrite ack threshold for an arbitrary consistency level, computed against
+     * this write's own replica plan (so it accounts for pending ranges exactly as blockFor() does).
+     * Used to gate the EC signal on a different (higher) CL than the client-ack CL.
+     */
+    public int writeThresholdFor(ConsistencyLevel cl)
+    {
+        return cl.blockForWrite(replicaPlan.replicationStrategy(), replicaPlan.pending());
+    }
+
+    /**
      * @return true if the message counts towards the blockFor() threshold
      */
     protected boolean waitingFor(InetAddressAndPort from)
@@ -285,6 +306,40 @@ public abstract class AbstractWriteResponseHandler<T> implements RequestCallback
             callback.run();
     }
 
+    /**
+     * LEAST: register a one-shot task that dispatches the round-2 EC signal once {@code threshold}
+     * acks have been received. {@code threshold} is the EC-signal consistency level (typically
+     * higher than the client-ack CL). The task should be non-blocking (e.g. it submits the actual
+     * send to a stage) since it may run on the messaging callback thread. If enough acks have
+     * already arrived by the time this is called, the task fires immediately — this covers the race
+     * where fast replicas ack before the trigger is attached (messages are sent inside performWrite,
+     * before the caller can set the trigger).
+     */
+    public void setEcSignalTrigger(int threshold, Runnable task)
+    {
+        this.ecSignalThreshold = threshold;
+        this.ecSignalTask = task;
+        maybeFireEcSignal();
+    }
+
+    /** LEAST: fire the EC-signal task once, if the ack threshold has been reached. Idempotent. */
+    protected final void maybeFireEcSignal()
+    {
+        if (ecSignalTask != null && ackCount() >= ecSignalThreshold && ecSignalFired.compareAndSet(false, true))
+            ecSignalTask.run();
+    }
+
+    /**
+     * LEAST: fire the EC-signal task now regardless of ack count. Used by the fallback path when the
+     * threshold can no longer be reached (too many failed replicas, or the write deadline passed) so
+     * that the signal still goes out with whatever replicas did ack. Idempotent.
+     */
+    public final void fireEcSignalIfPending()
+    {
+        if (ecSignalTask != null && ecSignalFired.compareAndSet(false, true))
+            ecSignalTask.run();
+    }
+
     @Override
     public void onFailure(InetAddressAndPort from, RequestFailureReason failureReason)
     {
@@ -300,6 +355,11 @@ public abstract class AbstractWriteResponseHandler<T> implements RequestCallback
 
         if (blockFor() + n > candidateReplicaCount())
             signal();
+
+        // LEAST: if enough replicas have failed that the EC-signal threshold can no longer be
+        // reached, dispatch the signal now with whatever acks we have. No-op if no trigger is set.
+        if (ecSignalTask != null && candidateReplicaCount() - n < ecSignalThreshold)
+            fireEcSignalIfPending();
 
         if (hintOnFailure != null && StorageProxy.shouldHint(replicaPlan.lookup(from)) && requestTime.shouldSendHints())
             StorageProxy.submitHint(hintOnFailure.get(), replicaPlan.lookup(from), null);
