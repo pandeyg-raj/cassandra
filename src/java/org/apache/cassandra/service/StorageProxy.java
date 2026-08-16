@@ -915,8 +915,17 @@ public class StorageProxy implements StorageProxyMBean
                         if (signalThreshold < clientThreshold)
                             signalThreshold = clientThreshold;
                         handler.setEcSignalTrigger(signalThreshold,
-                            () -> PriorityThreadPoolUtil.getExecutor().submit(
-                                      () -> sendECSignal(java.util.Collections.singletonList(mutation), consistencyLevel, requestTime)));
+                            () -> {
+                                // LEAST: stop the clock the instant the EC-signal threshold ack lands
+                                // (4 responses for EC-column QUORUM, RF=5), before any executor-submit
+                                // overhead. Shares requestTime with CoordinatorWriteTotal, so
+                                // (CoordinatorWriteTotalSignal - CoordinatorWriteTotal) is the wait for
+                                // the 2 extra responses beyond the client-ack CL.
+                                LatencyRecorder.record(mutation.getKeyspaceName(), "CoordinatorWriteTotalSignal",
+                                                       (nanoTime() - requestTime.startedAtNanos()) / 1000);
+                                PriorityThreadPoolUtil.getExecutor().submit(
+                                    () -> sendECSignal(java.util.Collections.singletonList(mutation), consistencyLevel, requestTime));
+                            });
                     }
                     responseHandlers.add(handler);
                 }
