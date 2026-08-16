@@ -694,7 +694,10 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
         {
             SSTableReadMetricsCollector metricsCollector = new SSTableReadMetricsCollector();
             Tracing.trace("ECTRACE READ MEMTABLE READ START");
-            long startMemtableRead = System.nanoTime();
+            // Consumption-timing accumulators, filled by TimingRowIterator during merge consumption
+            // and reported in withSSTablesIterated#onPartitionClose.
+            final long[] memtableReadNanos = new long[1];
+            final long[] sstableReadNanos = new long[1];
             for (Memtable memtable : view.memtables)
             {
                 UnfilteredRowIterator iter = memtable.rowIterator(partitionKey(), filter.getSlices(metadata()), columnFilter(), filter.isReversed(), metricsCollector);
@@ -706,12 +709,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
 
                 // Memtable data is always considered unrepaired
                 controller.updateMinOldestUnrepairedTombstone(memtable.getMinLocalDeletionTime());
-                inputCollector.addMemtableIterator(RTBoundValidator.validate(iter, RTBoundValidator.Stage.MEMTABLE, false));
+                inputCollector.addMemtableIterator(new TimingRowIterator(RTBoundValidator.validate(iter, RTBoundValidator.Stage.MEMTABLE, false), memtableReadNanos));
 
                 mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                         iter.partitionLevelDeletion().markedForDeleteAt());
             }
-            LatencyRecorder.record(cfs.metadata().keyspace,"MemtableRead", (System.nanoTime() - startMemtableRead)/1000);
             Tracing.trace("ECTRACE READ MEMTABLE READ STOP");
             /*
              * We can't eliminate full sstables based on the timestamp of what we've already read like
@@ -734,7 +736,6 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             Tracing.trace("ECTRACE READ SSTABLE READ START");
             LatencyRecorder.resetRequestIo();
             LatencyRecorder.recordRequestSStable(view.sstables.size());
-            long startSStableRead = System.nanoTime();
             for (SSTableReader sstable : view.sstables)
             {
                 // if we've already seen a partition tombstone with a timestamp greater
@@ -767,7 +768,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     UnfilteredRowIterator iter = intersects ? makeRowIteratorWithLowerBound(cfs, sstable, metricsCollector)
                                                             : makeRowIteratorWithSkippedNonStaticContent(cfs, sstable, metricsCollector);
 
-                    inputCollector.addSSTableIterator(sstable, iter);
+                    inputCollector.addSSTableIterator(sstable, new TimingRowIterator(iter, sstableReadNanos));
                     mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                             iter.partitionLevelDeletion().markedForDeleteAt());
                 }
@@ -789,7 +790,7 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     {
                         if (!sstable.isRepaired())
                             controller.updateMinOldestUnrepairedTombstone(sstable.getMinLocalDeletionTime());
-                        inputCollector.addSSTableIterator(sstable, iter);
+                        inputCollector.addSSTableIterator(sstable, new TimingRowIterator(iter, sstableReadNanos));
                         includedDueToTombstones++;
                         mostRecentPartitionTombstone = Math.max(mostRecentPartitionTombstone,
                                                                 iter.partitionLevelDeletion().markedForDeleteAt());
@@ -800,7 +801,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     }
                 }
             }
-            LatencyRecorder.record(cfs.metadata().keyspace,"SStableRead", (System.nanoTime() - startSStableRead)/1000);
+            // MemtableRead/SStableRead are recorded in withSSTablesIterated#onPartitionClose after real
+            // consumption. The old construction-time timing measured almost nothing (lazy reads).
             Tracing.trace("ECTRACE READ SSTABLE READ STOP");
             if ("ycsb".equals(cfs.metadata().keyspace))
             { int[] io = LatencyRecorder.REQUEST_IO.get();
@@ -817,7 +819,8 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
             StorageHook.instance.reportRead(cfs.metadata().id, partitionKey());
 
             List<UnfilteredRowIterator> iterators = inputCollector.finalizeIterators(cfs, nowInSec(), controller.oldestUnrepairedTombstone());
-            return withSSTablesIterated(iterators, cfs.metric, metricsCollector);
+            return withSSTablesIterated(iterators, cfs.metric, metricsCollector,
+                                        memtableReadNanos, sstableReadNanos);
         }
         catch (RuntimeException | Error e)
         {
@@ -884,9 +887,51 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
      * Note that we cannot use the Transformations framework because they greedily get the static row, which
      * would cause all iterators to be initialized and hence all sstables to be accessed.
      */
+    /**
+     * Times the actual (lazy) consumption of a source row iterator so MemtableRead / SStableRead reflect
+     * real read cost. Cassandra reads are lazy — the data is read during hasNext()/next(), driven by the
+     * downstream merge, long after the construction loops the old metrics timed. This wrapper accumulates
+     * the nanos spent advancing the wrapped iterator into a shared single-element holder, reported once the
+     * merged partition iterator is fully consumed and closed (see withSSTablesIterated#onPartitionClose).
+     * Consumption is single-threaded, so a plain long[] holder suffices. It does not time the
+     * construction-time partitionLevelDeletion()/staticRow() header access.
+     */
+    private static final class TimingRowIterator implements WrappingUnfilteredRowIterator
+    {
+        private final UnfilteredRowIterator wrapped;
+        private final long[] accumulatorNanos;
+
+        TimingRowIterator(UnfilteredRowIterator wrapped, long[] accumulatorNanos)
+        {
+            this.wrapped = wrapped;
+            this.accumulatorNanos = accumulatorNanos;
+        }
+
+        public UnfilteredRowIterator wrapped()
+        {
+            return wrapped;
+        }
+
+        public boolean hasNext()
+        {
+            long start = System.nanoTime();
+            try { return wrapped.hasNext(); }
+            finally { accumulatorNanos[0] += System.nanoTime() - start; }
+        }
+
+        public Unfiltered next()
+        {
+            long start = System.nanoTime();
+            try { return wrapped.next(); }
+            finally { accumulatorNanos[0] += System.nanoTime() - start; }
+        }
+    }
+
     private UnfilteredRowIterator withSSTablesIterated(List<UnfilteredRowIterator> iterators,
                                                        TableMetrics metrics,
-                                                       SSTableReadMetricsCollector metricsCollector)
+                                                       SSTableReadMetricsCollector metricsCollector,
+                                                       long[] memtableReadNanos,
+                                                       long[] sstableReadNanos)
     {
         UnfilteredRowIterator merged = UnfilteredRowIterators.merge(iterators);
 
@@ -904,6 +949,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                int mergedSSTablesIterated = metricsCollector.getMergedSSTables();
                metrics.updateSSTableIterated(mergedSSTablesIterated);
                Tracing.trace("Merged data from memtables and {} sstables", mergedSSTablesIterated);
+               // Record real read cost accumulated by the TimingRowIterator wrappers during consumption
+               // of this merged iterator. Fires once, after full consumption + close.
+               String keyspace = metadata().keyspace;
+               LatencyRecorder.record(keyspace, "SStableRead", sstableReadNanos[0] / 1000);
+               LatencyRecorder.record(keyspace, "MemtableRead", memtableReadNanos[0] / 1000);
            }
         }
         return Transformation.apply(merged, new UpdateSstablesIterated());
