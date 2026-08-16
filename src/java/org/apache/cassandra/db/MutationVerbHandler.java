@@ -45,7 +45,6 @@ public class MutationVerbHandler extends AbstractMutationVerbHandler<Mutation>
     @Override
     public void doVerb(Message<Mutation> message)
     {
-        long startWriteCommandReplica = System.nanoTime();
         if (approxTime.now() > message.expiresAtNanos())
         {
             Tracing.trace("Discarding mutation from {} (timed out)", message.from());
@@ -64,7 +63,6 @@ public class MutationVerbHandler extends AbstractMutationVerbHandler<Mutation>
         try
         {
             processMessage(message, respondToAddress);
-            LatencyRecorder.record(message.payload.getKeyspaceName() , "WriteCommandReplica", (System.nanoTime() - startWriteCommandReplica) / 1000);
         }
         catch (WriteTimeoutException wto)
         {
@@ -75,7 +73,14 @@ public class MutationVerbHandler extends AbstractMutationVerbHandler<Mutation>
     @Override
     protected void applyMutation(Message<Mutation> message, InetAddressAndPort respondToAddress)
     {
-        message.payload.applyFuture().addCallback(o -> respond(message, respondToAddress), wto -> failed());
+        long startWriteCommandReplica = System.nanoTime();
+        message.payload.applyFuture().addCallback(
+        o -> {
+            LatencyRecorder.record(message.payload.getKeyspaceName(), "WriteCommandReplica",
+                                   (System.nanoTime() - startWriteCommandReplica) / 1000);
+            respond(message, respondToAddress);
+        },
+        wto -> failed());
     }
 
     private static void forwardToLocalNodes(Message<Mutation> originalMessage, ForwardingInfo forwardTo)
